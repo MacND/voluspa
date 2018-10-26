@@ -1,0 +1,10 @@
+{
+  "token"  : "",
+  "prefix" : "!",
+  "invite" : "",
+  "dbhost" : "",
+  "dbname" : "",
+  "dbuser" : "",
+  "dbpass" : "",
+  "status" : ""
+}
