@@ -92,7 +92,7 @@ client.on("message", async message => {
     }
 
     if (command === "timezone") {
-        if (args[0] === 'list') {
+        if (args[0] === 'help') {
             message.author.send('You can find the list of acceptable timezones here: https://github.com/MacND/the-oracle-engine/blob/master/timezones.json');
         }
     }
