@@ -94,7 +94,30 @@ client.on("message", async message => {
     if (command === "timezone") {
         if (args[0] === 'help') {
             message.author.send('You can find the list of acceptable timezones here: https://github.com/MacND/the-oracle-engine/blob/master/timezones.json');
+            message.react('✅');
+        } else if (moment.tz.zone(args[0])) {
+            sqlClient.query('UPDATE users SET timezoneLocale = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] }, function (err, rows) {
+                if (err)
+                    throw (err);
+                console.log(rows);
+                if (rows.info.affectedRows === '0') {
+                    message.channel.send(`${message.author} unable to update timezone - are you registered?`);
+                } else {
+                    message.channel.send(`${message.author} updated timezone to ${args[0]}`);
+                }
+            });
+        } else {
+            message.react("❌");
         }
+    }
+
+    if (command === "userinfo") {
+        let discordId = (args[0] ? client.users.find(user => user.username.toLowerCase() === args[0].toLowerCase()).id : message.author.id);
+        sqlClient.query('SELECT * FROM users WHERE discordId = :discordId;', { discordId: discordId }, function (err, rows) {
+            if (err) throw (err);
+            console.log(rows);
+            message.channel.send(`User information for ${client.users.get(discordId).tag}\`\`\`BNet ID: ${rows[0].bnetId}\nTimezone: ${rows[0].timezoneLocale}\`\`\``);
+        });
     }
 
 });
