@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "the-oracle-engin-1542121351427",
+  "private_key_id": "190dc1c03a6fdf309e2fea2edd0b3c6f399a161f",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC3WnDWRDiItfvj\nMeiEl+3Ab2YZ5IUvQgarXtolRUR2HtzvlUXw210IZUMybyhv0dGz5TUUHOTMwmIp\n2nJZVqf4ELL79xveNDtyfkO7CBW1S+tnPm3YkrVgUdMdc4H4fANvt+fwhO3GQesG\na4CE7xWkmROh3PMFyuzdyojvQXY/1C7yLqEvJKYQ0GdCzZz6BA5Yj/BXvwtCbLTj\nVtmV1h1TYzz3RY6ICcerhVxLXwS0Gt1gRujGwZKoJhk0jg4fTxcDHh9GxaURQNlf\nfAMkchY6RXQyFCEfd+od6GlobFTxxVbTRJ4eqhpYUGz+m5cEHoU2ghK+Dt7RHH91\n2+F8sJg3AgMBAAECggEALYqDOFUdjadV9ypwTG7IGOIShB/kjMZjjbEzkcpQpN4p\nlkCHbLmvs+Qi+qXtb0i4Q2yM8H/0vH8Tjr25ZUNG2TCcpETOYTSsB1YhUJVDfxJq\nV+yDsCVQc6ofO9Ny1ttGpzsQmwcJYBMDY0bUVzBjOczjuXJ90lSC3Nvvgy3JRzTr\nC0l879DdSSGzwWvvgwxaSi2/pdVhbjBqpJzwa68fqg7B6qr2Gxz+Ocq20s0PY+Wr\noxKUJmqLQZhGkgbuGemZaUA1Urb+5eUhJ0lilbIpNqchMghYjOhuVKtccnwUHGnP\nI/l2Wb2v7sDinXHMJ83FUO61e3f5nvMNAeW7BPGdYQKBgQDaQ+pIUtiTsBbZD8U6\nKxe0voLV14JM42Xs6dGGD9/QQ5fEUl3gfO+mG+lixo/7F+I2wqz4bWJVb372pGTs\nOIZTN0cOoYybS9lvsYRIHkj0j/y3HvKgx+/QbddjlC5bGYmBA1Eut8Xp+DEzN3ad\nStNr8/G0MB/4Ce1LqZB0K91/OQKBgQDXDV+9VX2X/gooJYM6iEfj3Ouz3+8gw7Yn\nGvZipIK4PJP0zNZOLAQ/9tMqd9H9vLo/HzfA1rQK/OYKFml7+Jd01ajZzrR3v/5X\ndiEYC+epmClZseJFSLOczNHgx37CwwkLebIp/yAtCNNequyV7ZoHglnqtVpcZkwL\nvikQvMti7wKBgGAMkwTQsE4Np4BN2FUIsZ3wWFMSS1zalPf0zSdZxPw5Qog6VuV7\nFVrb3ZCCIMo2cG34rXWFbUh7kDupjGAHX9Uu9i4SGXYdosnsLHIwIZq94lATZmIq\nmfX24FoJ03xzeHc1pnwQkx+rALuxJJmDXBadezf4FZlphOtO6yq0QvzBAoGBALrR\ntns/WmUA3wfzVqYxn+pWkDhp8E3RV1tvc91LtvegQJRooj+0w1hh7x40iytXmaCe\nWQvgOPZWruzSfX6h/ckUl6PniyWAl86ZI7TFGtJdCocOHlg8CTTNRgJ0rC07y465\ngMo1BVm6Eg1qhS7WA3pEhiJ8u2wLvkJxRzFwIWvnAoGBAKaaTGXtvy9TiB2lh/ZM\n4FRoECMYn8Lv5BykRHH2CcUDng4+Xre3E74jhFT0kIf8Pab9Pbis82/iJzBfe/5Y\nMOSdRSMfBU45tQTYOxK9tpOYeOihxhSB+3NO9Z/xC+AkAwKbz5PCrxnXSLPBe/jD\na1jyt66bmXWyc/bxRsINP7vW\n-----END PRIVATE KEY-----\n",
+  "client_email": "the-oracle-engine@the-oracle-engin-1542121351427.iam.gserviceaccount.com",
+  "client_id": "106280266046651650073",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/the-oracle-engine%40the-oracle-engin-1542121351427.iam.gserviceaccount.com"
+}
+
