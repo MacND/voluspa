@@ -1,2 +1,3 @@
 config.json
 googleApiKey.json
+./node_modules
