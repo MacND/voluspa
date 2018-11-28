@@ -27,8 +27,8 @@ const jwtClient = new google.auth.JWT(
 );
 
 // Variable declarations
-var events;
-var registeredUsers;
+var events = updateEvents();
+var registeredUsers = updateUsers();
 
 // Functions
 function updateUsers() {
@@ -36,7 +36,7 @@ function updateUsers() {
         if (err) throw (err);
         console.log('Pulled users from database.');
         registeredUsers = rows;
-        console.log(rows);
+        //console.log(rows);
     });
     sqlClient.end();
 }
@@ -46,7 +46,7 @@ function updateEvents() {
         if (err) throw (err);
         console.log('Pulled events from database.');
         events = rows;
-        console.log(rows);
+        //console.log(rows);
     });
     sqlClient.end();
 }
@@ -110,10 +110,12 @@ client.on("message", async message => {
     }
 
     if (command === "register" && args[0] && args[1] && message.channel.id === '494459395888119809') {
-        let user = users.find(o => o.discordId == message.author.id);
+        let user = registeredUsers.find(o => o.discordId == message.author.id),
+            response;
+
         if (!user) {
             try {
-                let response = await drive.files.list({
+                response = await drive.files.list({
                     auth: jwtClient,
                     q: `name = '${args[0]}' AND '${config.driveFolderId}' in parents`
                 });
@@ -127,14 +129,55 @@ client.on("message", async message => {
                 let bnetId = args[0];
                 let timezone = args[1];
                 let discordId = (message.author.id);
+                let copyResponse, permsResponse;
+                let copyBody = { 'name': message.author.id };
+                let createBody = { 'role': 'writer', 'type': 'anyone' };
+                let newFileId;
 
-                sqlClient.query('INSERT INTO users VALUES (:discordId, :bnetId, :timezone);', { discordId: discordId, bnetId: args[0], timezone: args[1] }, function (err, rows) {
+                sqlClient.query('INSERT INTO users (discordId, bnetId, timezoneLocale) VALUES (:discordId, :bnetId, :timezone);', { discordId: discordId, bnetId: args[0], timezone: args[1] }, function (err, rows) {
                     if (err)
                         throw (err);
                     console.log(rows);
                     message.channel.send(`${message.author} registered BNet tag ${bnetId} with timezone ${timezone}`);
                 });
-                sqlClient.end();
+
+                try {
+                    copyResponse = await drive.files.copy({
+                        auth: jwtClient,
+                        fileId: config.templateFileId,
+                        resource: copyBody
+                    });
+
+                    newFileId = copyResponse.data.id;
+                    console.log(`Attempting to set newFileId as ${newFileId} | ${copyResponse.data.id}`)
+                    console.log(copyResponse.data);
+                    message.channel.send('Successfully copied the file!');
+
+                    permsResponse = await drive.permissions.create({
+                        auth: jwtClient,
+                        fileId: newFileId,
+                        resource: createBody
+                    });
+
+                    console.log(permsResponse.data);
+                    message.author.send(`You can access the file at https://docs.google.com/spreadsheets/d/${newFileId}`);
+
+                    sqlClient.query('UPDATE users SET gsheeturl = :gsheetId WHERE discordId = :discordId;', { discordId: discordId, gsheeturl: newFileId }, (err, rows) => {
+                        if (err)
+                            throw (err);
+                        console.log(rows);
+                        console.log('Updated gsheet URL in database.');
+                    });
+
+                    sqlClient.end();
+
+                } catch (err) {
+                    console.log('The API returned an error: ' + err);
+                    message.channel.send(`${message.author} error: there was an error while trying to register.  Please contact an admin.`);
+                }
+
+                updateUsers();
+
             } else {
                 message.channel.send(`${message.author} malformed input - please ensure you are using your full BNet ID (including #) and a valid timezone.`);
             }
@@ -181,16 +224,18 @@ client.on("message", async message => {
     }
 
     if (command === "userinfo") {
-        let discordId = (args[0] ? client.users.find(user => user.username.toLowerCase() === args[0].toLowerCase()).id : message.author.id);
-        sqlClient.query('SELECT * FROM users WHERE discordId = :discordId;', { discordId: discordId }, function (err, rows) {
-            if (err) throw (err);
-            console.log(rows);
-            message.channel.send(`User information for ${client.users.get(discordId).tag}\`\`\`BNet ID: ${rows[0].bnetId}\nTimezone: ${rows[0].timezoneLocale}\`\`\``);
-        });
-        sqlClient.end();
+        let searchUserId = (args[0] ? client.users.find(user => user.username.toLowerCase() === args[0].toLowerCase()).id : message.author.id);
+        let user = registeredUsers.find(o => o.discordId == searchUserId);
+
+        if (!user) {
+            message.channel.send(`${client.users.get(searchUserId).tag} is not registered.`);
+        } else {
+            message.channel.send(`User information for ${client.users.get(searchUserId).tag}\`\`\`BNet ID: ${user.bnetId}\nTimezone: ${user.timezoneLocale}\`\`\``);
+        }
+
     }
 
-    if (command === "suggest", args[0]) {
+    if (command === "suggest" && args[0]) {
         sqlClient.query('INSERT INTO schedule (eventShortCode, admin) VALUES (:shortCode, :adminId)', { shortcode: args[0], adminId: message.author.id }, function (err, rows) {
             if (err) throw (err);
             console.log(rows);
@@ -222,38 +267,43 @@ client.on("message", async message => {
         let createBody = { 'role': 'writer', 'type': 'anyone' };
         let newFileId;
 
-        drive.files.copy({
-            auth: jwtClient,
-            fileId: config.templateFileId,
-            resource: copyBody
-        }, (err, response) => {
-            if (err) {
-                console.log('The API returned an error: ' + err);
-                message.channel.send('The API returned an error: ' + err);
-                return;
-            } else {
-                newFileId = response.data.id;
-                console.log(`Attempting to set newFileId as ${newFileId} | ${response.data.id}`)
-                console.log(response.data);
-                message.channel.send('Successfully copied the file!');
+        try {
+            drive.files.copy({
+                auth: jwtClient,
+                fileId: config.templateFileId,
+                resource: copyBody
+            }, (err, response) => {
+                if (err) {
+                    console.log('The API returned an error: ' + err);
+                    message.channel.send('The API returned an error: ' + err);
+                    return;
+                } else {
+                    newFileId = response.data.id;
+                    console.log(`Attempting to set newFileId as ${newFileId} | ${response.data.id}`)
+                    console.log(response.data);
+                    message.channel.send('Successfully copied the file!');
 
-                drive.permissions.create({
-                    auth: jwtClient,
-                    fileId: newFileId,
-                    resource: createBody
-                }, (err, response) => {
-                    if (err) {
-                        console.log('The API returned an error: ' + err);
-                        message.channel.send('An error occured - please consult the logs.');
-                        return;
-                    } else {
-                        console.log(response.data);
-                        message.author.send(`You can access the file at https://docs.google.com/spreadsheets/d/${newFileId}`);
-                    }
-                });
+                    drive.permissions.create({
+                        auth: jwtClient,
+                        fileId: newFileId,
+                        resource: createBody
+                    }, (err, response) => {
+                        if (err) {
+                            console.log('The API returned an error: ' + err);
+                            message.channel.send('An error occured - please consult the logs.');
+                            return;
+                        } else {
+                            console.log(response.data);
+                            message.author.send(`You can access the file at https://docs.google.com/spreadsheets/d/${newFileId}`);
+                        }
+                    });
 
-            }
-        });
+                }
+            });
+        } catch (err) {
+            console.log('The API returned an error: ' + err);
+        }
+
     }
 
 });
@@ -271,3 +321,4 @@ UPDATE schedule
     SET fireteamId = @scheduleId;
 END;
 */
+
