@@ -239,9 +239,10 @@ client.on("message", async message => {
     if (command === "refresh" && message.author.id === '79711200312557568') {
         getEvents();
         getUsers();
-        message.channel.send('Pulled users and events from database.');
+        message.react("✅");
         console.log('Refreshed cache of users and events.');
     }
+
 
     /*
     if (command === "suggest" && args[0]) {
