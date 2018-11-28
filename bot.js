@@ -149,9 +149,7 @@ client.on("message", async message => {
                     });
 
                     newFileId = copyResponse.data.id;
-                    console.log(`Attempting to set newFileId as ${newFileId} | ${copyResponse.data.id}`)
                     console.log(copyResponse.data);
-                    message.channel.send('Successfully copied the file!');
 
                     permsResponse = await drive.permissions.create({
                         auth: jwtClient,
@@ -160,7 +158,7 @@ client.on("message", async message => {
                     });
 
                     console.log(permsResponse.data);
-                    message.author.send(`You can access the file at https://docs.google.com/spreadsheets/d/${newFileId}`);
+                    message.author.send(`Your schedule spreadhseet has been created and is accessible at https://docs.google.com/spreadsheets/d/${newFileId}.  Please keep this link private, as it is shared by URL with no other security.`);
 
                     sqlClient.query('UPDATE users SET gsheeturl = :gsheetId WHERE discordId = :discordId;', { discordId: discordId, gsheeturl: newFileId }, (err, rows) => {
                         if (err)
@@ -235,6 +233,7 @@ client.on("message", async message => {
 
     }
 
+    /*
     if (command === "suggest" && args[0]) {
         sqlClient.query('INSERT INTO schedule (eventShortCode, admin) VALUES (:shortCode, :adminId)', { shortcode: args[0], adminId: message.author.id }, function (err, rows) {
             if (err) throw (err);
@@ -243,68 +242,7 @@ client.on("message", async message => {
         });
         sqlClient.end();
     }
-
-    if (command === "findfile") {
-        try {
-            let response = await drive.files.list({
-                auth: jwtClient,
-                q: `name = '${args[0]}' AND '${config.driveFolderId}' in parents`
-            });
-            console.log(response.data);
-            if (response.data.files.length) {
-                message.channel.send('File exists.');
-            } else {
-                message.channel.send('File does not exist.');
-            }
-
-        } catch (err) {
-            console.log('The API returned an error: ' + err);
-        }
-    }
-
-    if (command === "scheduletest") {
-        let copyBody = { 'name': message.author.id };
-        let createBody = { 'role': 'writer', 'type': 'anyone' };
-        let newFileId;
-
-        try {
-            drive.files.copy({
-                auth: jwtClient,
-                fileId: config.templateFileId,
-                resource: copyBody
-            }, (err, response) => {
-                if (err) {
-                    console.log('The API returned an error: ' + err);
-                    message.channel.send('The API returned an error: ' + err);
-                    return;
-                } else {
-                    newFileId = response.data.id;
-                    console.log(`Attempting to set newFileId as ${newFileId} | ${response.data.id}`)
-                    console.log(response.data);
-                    message.channel.send('Successfully copied the file!');
-
-                    drive.permissions.create({
-                        auth: jwtClient,
-                        fileId: newFileId,
-                        resource: createBody
-                    }, (err, response) => {
-                        if (err) {
-                            console.log('The API returned an error: ' + err);
-                            message.channel.send('An error occured - please consult the logs.');
-                            return;
-                        } else {
-                            console.log(response.data);
-                            message.author.send(`You can access the file at https://docs.google.com/spreadsheets/d/${newFileId}`);
-                        }
-                    });
-
-                }
-            });
-        } catch (err) {
-            console.log('The API returned an error: ' + err);
-        }
-
-    }
+    */
 
 });
 
