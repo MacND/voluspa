@@ -27,30 +27,30 @@ const jwtClient = new google.auth.JWT(
 );
 
 // Variable declarations
-var events = updateEvents();
-var registeredUsers = updateUsers();
+var events;
+var registeredUsers;
 
 // Functions
-function updateUsers() {
+function getUsers() {
     sqlClient.query('SELECT * FROM users;', (err, rows) => {
         if (err) throw (err);
         console.log('Pulled users from database.');
         registeredUsers = rows;
-        //console.log(rows);
     });
     sqlClient.end();
 }
 
-function updateEvents() {
+function getEvents() {
     sqlClient.query('SELECT * FROM events;', (err, rows) => {
         if (err) throw (err);
         console.log('Pulled events from database.');
         events = rows;
-        //console.log(rows);
     });
     sqlClient.end();
 }
 
+getUsers();
+getEvents();
 
 client.on("ready", async () => {
     console.log(`Successfully connected to Discord`);
@@ -73,26 +73,16 @@ client.on("message", async message => {
     const args = message.content.slice(config.prefix.length).trim().split(/ +/g);
     const command = args.shift().toLowerCase();
 
-    if (command === "test") {
+    if (command === "ping") {
         message.channel.send('Eyes up, Guardian.');
     }
 
-    if (command === "status") {
-        if (args[0] == null) {
-            message.channel.startTyping();
-            message.channel.send(client.user.presence.game.name).then(() => { message.channel.stopTyping(); });
-        } else {
-            message.channel.startTyping();
-            message.delete().catch(O_o => { });
-            client.user.setActivity(args[0] === "reset" ? config.status : args.join(" ").replace(/["]+/g, ''));
-            message.channel.send(args[0] === "reset" ? "Status reset" : "Status updated").then(() => { message.channel.stopTyping(); });
-        }
-    }
 
     if (command === "die" && message.author.id === '79711200312557568') {
         message.channel.send("Your light is lost...");
         client.destroy();
     }
+
 
     if (command === "eventinfo" && args[0]) {
         let event = events.find(o => o.shortCode == args[0]);
@@ -108,6 +98,7 @@ client.on("message", async message => {
             message.channel.send(embed);
         }
     }
+
 
     if (command === "register" && args[0] && args[1] && message.channel.id === '494459395888119809') {
         let user = registeredUsers.find(o => o.discordId == message.author.id),
@@ -174,7 +165,7 @@ client.on("message", async message => {
                     message.channel.send(`${message.author} error: there was an error while trying to register.  Please contact an admin.`);
                 }
 
-                updateUsers();
+                getUsers();
 
             } else {
                 message.channel.send(`${message.author} malformed input - please ensure you are using your full BNet ID (including #) and a valid timezone.`);
@@ -184,42 +175,53 @@ client.on("message", async message => {
         }
     }
 
+
     if (command === "timezone") {
+        let user = registeredUsers.find(o => o.discordId == message.author.id);
+
         if (args[0] === 'help') {
-            message.author.send('You can find the list of acceptable timezones here: <https://github.com/MacND/the-oracle-engine/blob/master/timezones.json>');
-            message.react('✅');
-        } else if (moment.tz.zone(args[0])) {
-            sqlClient.query('UPDATE users SET timezoneLocale = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] }, function (err, rows) {
+            message.channel.send('You can find the list of acceptable timezones here: <https://github.com/MacND/the-oracle-engine/blob/master/timezones.json>');
+            return;
+        }
+
+        if (user) {
+            if (moment.tz.zone(args[0])) {
+                if (args[0] !== user.timezoneLocale) {
+                    sqlClient.query('UPDATE users SET timezoneLocale = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] }, (err, rows) => {
+                        if (err)
+                            throw (err);
+                        console.log(rows);
+                        message.channel.send(`${message.author} updated timezone to ${args[0]}.`);
+                    });
+                    sqlClient.end();
+                    getUsers();
+                }
+            } else {
+                message.channel.send('Invalid timezone supplied.');
+            }
+        } else {
+            message.channel.send('Could not found registered user.');
+        }
+    }
+
+
+    if (command === "bnet") {
+        let user = registeredUsers.find(o => o.discordId == message.author.id);
+
+        if (user && args[0].includes('#') && (args[0] != user.bnetId)) {
+            sqlClient.query('UPDATE users SET bnetId = :bnet WHERE discordId = :discordId;', { discordId: message.author.id, bnet: args[0] }, (err, rows) => {
                 if (err)
                     throw (err);
                 console.log(rows);
-                if (rows.info.affectedRows === '0') {
-                    message.channel.send(`${message.author} unable to update timezone - are you registered?`);
-                } else {
-                    message.channel.send(`${message.author} updated timezone to ${args[0]}`);
-                }
+                message.channel.send(`${message.author} updated BNet ID to ${args[0]}`);
             });
             sqlClient.end();
+            getUsers();
         } else {
             message.react("❌");
         }
     }
 
-    if (command === "bnet") {
-        if (args[0] && args[0].includes('#')) {
-            sqlClient.query('UPDATE users SET bnetId = :bnet WHERE discordId = :discordId;', { discordId: message.author.id, bnet: args[0] }, function (err, rows) {
-                if (err)
-                    throw (err);
-                console.log(rows);
-                if (rows.info.affectedRows === '0') {
-                    message.channel.send(`${message.author} unable to update BNet ID - are you registered?`);
-                } else {
-                    message.channel.send(`${message.author} updated BNet ID to ${args[0]}`);
-                }
-            });
-            sqlClient.end();
-        }
-    }
 
     if (command === "userinfo") {
         let searchUserId = (args[0] ? client.users.find(user => user.username.toLowerCase() === args[0].toLowerCase()).id : message.author.id);
@@ -231,6 +233,14 @@ client.on("message", async message => {
             message.channel.send(`User information for ${client.users.get(searchUserId).tag}\`\`\`BNet ID: ${user.bnetId}\nTimezone: ${user.timezoneLocale}\`\`\``);
         }
 
+    }
+
+
+    if (command === "refresh" && message.author.id === '79711200312557568') {
+        getEvents();
+        getUsers();
+        message.channel.send('Pulled users and events from database.');
+        console.log('Refreshed cache of users and events.');
     }
 
     /*
