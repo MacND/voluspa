@@ -301,7 +301,7 @@ client.on("message", async message => {
                             message.channel.send(`Set start time of ${args[0]} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
                         });
                     sqlClient.end();
-
+                    getSchedule();
                 }
             }
         }
