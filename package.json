@@ -9,6 +9,7 @@
     "googleapis": "^35.0.0",
     "mariasql": "^0.2.6",
     "moment": "^2.22.2",
+    "moment-duration-format": "^2.2.2",
     "moment-timezone": "^0.5.21",
     "request": "^2.81.0"
   },
