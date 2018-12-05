@@ -30,6 +30,7 @@ const jwtClient = new google.auth.JWT(
 var events;
 var registeredUsers;
 var schedule;
+var fireteams;
 
 // Functions
 function getUsers() {
@@ -37,6 +38,7 @@ function getUsers() {
         if (err) throw (err);
         console.log('Pulled users from database.');
         registeredUsers = rows;
+        delete registeredUsers.info;
     });
     sqlClient.end();
 }
@@ -46,22 +48,49 @@ function getEvents() {
         if (err) throw (err);
         console.log('Pulled events from database.');
         events = rows;
+        delete events.info;
     });
     sqlClient.end();
 }
 
 function getSchedule() {
-    sqlClient.query('SELECT s.id, s.fireteamId, s.adminId, s.startTime, s.raidReportUrl, s.joinCode, e.shortCode, e.name, TIME_FORMAT(SEC_TO_TIME(e.avgLength), "%k:%i") as avgLength, e.minPower FROM schedule s INNER JOIN events e ON e.shortCode = s.eventShortCode;', (err, rows) => {
+    sqlClient.query('SELECT s.id, s.fireteamId, s.adminId, s.startTime, s.raidReportUrl, s.joinCode, e.shortCode, e.name, TIME_FORMAT(SEC_TO_TIME(e.avgLength), "%k:%i") as avgLength, e.minPower, COUNT(fm.guardianId) AS fireteamCount FROM schedule s INNER JOIN events e ON e.shortCode = s.eventShortCode LEFT JOIN fireteamMembers fm ON fm.fireteamId = s.fireteamId GROUP BY fm.fireteamId;', (err, rows) => {
         if (err) throw (err);
         console.log('Pulled schedule from database.');
         schedule = rows;
+        delete schedule.info;
+
+        for (let i = 0; i < schedule.length; i++) {
+            sqlClient.query('SELECT guardianId FROM fireteamMembers WHERE fireteamId = :fireteamId;', { fireteamId: schedule[i].fireteamId }, { useArray: true }, (err, rows) => {
+                if (err) throw (err);
+                delete rows.info;
+                console.log(rows);
+                schedule[i].fireteamMembers = [].concat.apply([], rows);
+            });
+        }
+        console.log('Pulled fireteams from database.');
     });
     sqlClient.end();
 }
+/*
+function getFireteams() {
+    for (let i = 0; i < schedule.length; i++) {
+        sqlClient.query('SELECT guardianId FROM fireteamMembers WHERE fireteamId = :fireteamId;', { fireteamId: schedule[i].fireteamId }, (err, rows) => {
+            if (err) throw (err);
+            console.log('Pulled fireteams from database.');
+            delete rows.info;
+            schedule[i].fireteamMembers = [rows];
+            //delete fireteams.info;
+        });
+    }
+    sqlClient.end();
+}
+*/
 
 getUsers();
 getEvents();
 getSchedule();
+//getFireteams();
 
 client.on("ready", async () => {
     console.log(`Successfully connected to Discord`);
@@ -86,6 +115,12 @@ client.on("message", async message => {
 
     if (command === "ping") {
         message.channel.send('Eyes up, Guardian.');
+    }
+
+
+    if (command === "echoschedule") {
+        message.channel.send(`\`\`\`JSON\n${JSON.stringify(schedule, null, '\t')}\`\`\``);
+        console.log(schedule);
     }
 
 
@@ -251,8 +286,10 @@ client.on("message", async message => {
     if (command === "refresh" && message.author.id === '79711200312557568') {
         getEvents();
         getUsers();
+        getSchedule();
+        getFireteams();
         message.react("✅");
-        console.log('Refreshed cache of users and events.');
+        console.log('Refreshed cache.');
     }
 
 
@@ -312,14 +349,19 @@ client.on("message", async message => {
         if (args[0]) {
             let scheduledEvent = schedule.find(o => o.joinCode == args[0]);
             console.log(scheduledEvent);
-            if (scheduledEvent) {
+            if (scheduledEvent && scheduledEvent.fireteamCount < 7) {
                 sqlClient.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);',
                     { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId }, (err, rows) => {
                         if (err) throw (err);
                         console.log(rows);
-                        message.channel.send(`${message.author} joined ${scheduledEvent.joinCode}`);
+                        if (rows.info.affectedRows > 0) {
+                            message.channel.send(`${message.author} joined ${scheduledEvent.joinCode}`);
+                        } else {
+                            message.channel.send(`${message.author} you are already a member of ${scheduledEvent.joinCode}`);
+                        }
                     });
                 sqlClient.end();
+                getSchedule();
             }
         }
     }
@@ -329,14 +371,65 @@ client.on("message", async message => {
         if (args[0]) {
             let scheduledEvent = schedule.find(o => o.joinCode == args[0]);
             if (scheduledEvent) {
+                if (scheduledEvent.adminId != message.author.id) {
+                    console.log(scheduledEvent);
+                    sqlClient.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
+                        { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId }, (err, rows) => {
+                            if (err) throw (err);
+                            console.log(rows);
+                            if (rows.info.affectedRows > 0) {
+                                message.channel.send(`${message.author} left ${scheduledEvent.joinCode}`);
+                            } else {
+                                message.channel.send(`${message.author} you are not a member of ${scheduledEvent.joinCode}`);
+                            }
+                        });
+                    sqlClient.end();
+                    getSchedule();
+                }
+            }
+        }
+    }
+
+
+    if (command === "kick") {
+        if (args[0]) {
+            let scheduledEvent = schedule.find(o => o.joinCode == args[0]);
+            let userToKick = (args[1] ? client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id : message.author.id);
+
+            if (scheduledEvent && scheduledEvent.adminId == message.author.id && userToKick != scheduledEvent.adminId) {
                 console.log(scheduledEvent);
-                sqlClient.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId);',
-                    { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId }, (err, rows) => {
+                console.log(userToKick);
+                sqlClient.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
+                    { guardianId: userToKick, fireteamId: scheduledEvent.fireteamId }, (err, rows) => {
                         if (err) throw (err);
                         console.log(rows);
-                        message.channel.send(`${message.author} left ${scheduledEvent.joinCode}`);
+                        message.channel.send(`${message.author} kicked ${client.users.get(userToKick).tag} from ${scheduledEvent.joinCode}.`);
                     });
                 sqlClient.end();
+                getSchedule();
+            }
+        }
+    }
+
+
+    if (command === "admin") {
+        if (args[0]) {
+            if (args[1]) {
+                let scheduledEvent = schedule.find(o => o.joinCode == args[0]);
+                let userToMod = (args[1] ? client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id : message.author.id);
+
+                console.log(userToMod);
+
+                if (scheduledEvent && scheduledEvent.adminId == message.author.id) {
+                    sqlClient.query('UPDATE schedule SET adminId = :adminId WHERE joinCode = :joinCode;',
+                        { adminId: userToMod, joinCode: scheduledEvent.joinCode }, (err, rows) => {
+                            if (err) throw (err);
+                            console.log(rows);
+                            message.channel.send(`${message.author} has made ${client.users.get(userToMod).tag} the admin of ${scheduledEvent.joinCode}.`);
+                        });
+                    sqlClient.end();
+                    getSchedule();
+                }
             }
         }
     }
@@ -346,7 +439,7 @@ client.on("message", async message => {
         let creator = registeredUsers.find(o => o.discordId == message.author.id);
         let messageString = "";
         schedule.forEach((scheduleLine, index) => {
-            messageString += `${scheduleLine.name} - ${(scheduleLine.startTime ? moment(scheduleLine.startTime).tz(creator.timezoneLocale).format('YYYY-MM-DD HH:mm') : 'Not Set')} \n!join ${scheduleLine.joinCode} | Length: ${scheduleLine.avgLength} | Power: ${scheduleLine.minPower} \n\n`;
+            messageString += `${scheduleLine.name} - ${(scheduleLine.startTime ? `${moment(scheduleLine.startTime).tz(creator.timezoneLocale).format('YYYY-MM-DD HH:mm')} (${moment.tz(creator.timezoneLocale).format('Z')})` : 'Not Set')} \n!join ${scheduleLine.joinCode} | Length: ${scheduleLine.avgLength} | Power: ${scheduleLine.minPower} | Members: ${scheduleLine.fireteamCount}/6\n\n`;
         });
 
         message.channel.send((messageString ? `\`\`\`${messageString.trim()}\`\`\`` : "No events scheduled."));
