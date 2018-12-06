@@ -417,7 +417,7 @@ client.on("message", async message => {
                 if (scheduledEvent) {
                     if (scheduledEvent.adminId == message.author.id) {
                         if (userToKick != message.author.id) {
-                            if (scheduledEvent.fireteamMembers.indexOf(userToKick) <= -1) {
+                            if (scheduledEvent.fireteamMembers.indexOf(userToKick) > -1) {
                                 console.log(scheduledEvent);
                                 console.log(userToKick);
                                 sqlClient.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
