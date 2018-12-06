@@ -72,25 +72,10 @@ function getSchedule() {
     });
     sqlClient.end();
 }
-/*
-function getFireteams() {
-    for (let i = 0; i < schedule.length; i++) {
-        sqlClient.query('SELECT guardianId FROM fireteamMembers WHERE fireteamId = :fireteamId;', { fireteamId: schedule[i].fireteamId }, (err, rows) => {
-            if (err) throw (err);
-            console.log('Pulled fireteams from database.');
-            delete rows.info;
-            schedule[i].fireteamMembers = [rows];
-            //delete fireteams.info;
-        });
-    }
-    sqlClient.end();
-}
-*/
 
 getUsers();
 getEvents();
 getSchedule();
-//getFireteams();
 
 client.on("ready", async () => {
     console.log(`Successfully connected to Discord`);
@@ -118,30 +103,30 @@ client.on("message", async message => {
     }
 
 
-    if (command === "echoschedule") {
-        message.channel.send(`\`\`\`JSON\n${JSON.stringify(schedule, null, '\t')}\`\`\``);
-        console.log(schedule);
-    }
-
-
     if (command === "die" && message.author.id === '79711200312557568') {
         message.channel.send("Your light is lost...");
         client.destroy();
     }
 
 
-    if (command === "eventinfo" && args[0]) {
-        let event = events.find(o => o.shortCode == args[0]);
-        if (event) {
-            const embed = new Discord.RichEmbed()
-                .setTitle(`${event.name} (${event.eventType})`)
-                .setColor(5517157)
-                .setDescription(`\"*${event.eventTagline}*\"\n${event.eventDescription}\n\`\`\`Short code: ${event.shortCode}\nRecommended power: ${event.minPower}\nAverage length: ${moment().startOf('day').seconds(event.avgLength).format('H:mm')}\n\`\`\``)
-                .setURL(`${event.wikiLink}`)
-                .setThumbnail(`https://gamezone.cool/img/${event.shortCode}.png`)
-                .setFooter(`Gather your Fireteam - !suggest ${event.shortCode}`)
+    if (command === "eventinfo") {
+        if (args[0]) {
+            let event = events.find(o => o.shortCode == args[0].toLowerCase());
+            if (event) {
+                const embed = new Discord.RichEmbed()
+                    .setTitle(`${event.name} (${event.eventType})`)
+                    .setColor(5517157)
+                    .setDescription(`\"*${event.eventTagline}*\"\n${event.eventDescription}\n\`\`\`Short code: ${event.shortCode}\nRecommended power: ${event.minPower}\nAverage length: ${moment().startOf('day').seconds(event.avgLength).format('H:mm')}\n\`\`\``)
+                    .setURL(`${event.wikiLink}`)
+                    .setThumbnail(`https://gamezone.cool/img/${event.shortCode}.png`)
+                    .setFooter(`Gather your Fireteam - !suggest ${event.shortCode}`)
 
-            message.channel.send(embed);
+                message.channel.send(embed);
+            } else {
+                message.channel.send(`Couldn't find an event with shortcode ${args[0]}`);
+            }
+        } else {
+            message.channel.send(`Please supply an event short code.`);
         }
     }
 
@@ -248,7 +233,7 @@ client.on("message", async message => {
                 message.channel.send('Invalid timezone supplied.');
             }
         } else {
-            message.channel.send('Could not found registered user.');
+            message.channel.send('Unable to find user - have you registered?');
         }
     }
 
@@ -256,17 +241,25 @@ client.on("message", async message => {
     if (command === "bnet") {
         let user = registeredUsers.find(o => o.discordId == message.author.id);
 
-        if (user && args[0].includes('#') && (args[0] != user.bnetId)) {
-            sqlClient.query('UPDATE users SET bnetId = :bnet WHERE discordId = :discordId;', { discordId: message.author.id, bnet: args[0] }, (err, rows) => {
-                if (err)
-                    throw (err);
-                console.log(rows);
-                message.react("✅");
-            });
-            sqlClient.end();
-            getUsers();
+        if (user) {
+            if (args[0].includes('#')) {
+                if (args[0] != user.bnetId) {
+                    sqlClient.query('UPDATE users SET bnetId = :bnet WHERE discordId = :discordId;', { discordId: message.author.id, bnet: args[0] }, (err, rows) => {
+                        if (err)
+                            throw (err);
+                        console.log(rows);
+                        message.react("✅");
+                    });
+                    sqlClient.end();
+                    getUsers();
+                } else {
+                    message.channel.send(`Your BNet ID is already set to ${args[0]}`);
+                }
+            } else {
+                message.channel.send('Invalid BNet ID supplied');
+            }
         } else {
-            message.react("❌");
+            message.channel.send('Unable to find user - have you registered?');
         }
     }
 
@@ -287,89 +280,107 @@ client.on("message", async message => {
         getEvents();
         getUsers();
         getSchedule();
-        getFireteams();
         message.react("✅");
         console.log('Refreshed cache.');
     }
 
 
-    if (command === "make" && args[0]) {
-        let event = events.find(o => o.shortCode == args[0]);
-        if (event) {
-            sqlClient.query(`START TRANSACTION;
+    if (command === "make") {
+        if (args[0]) {
+            let event = events.find(o => o.shortCode == args[0].toLowerCase());
+            if (event) {
+                sqlClient.query(`START TRANSACTION;
                     INSERT INTO schedule (eventShortCode, adminId) VALUES (:shortCode, :adminId);
                     SELECT @scheduleId:=LAST_INSERT_ID();
                     INSERT INTO fireteamMembers(guardianId, fireteamId) VALUES(:adminId, @scheduleId);
                     UPDATE schedule SET joinCode = CONCAT(eventShortCode, '-', id), fireteamId = @scheduleId WHERE id = @scheduleId;
                     COMMIT;`,
-                { shortCode: args[0], adminId: message.author.id }, (err, rows) => {
-                    if (err) throw (err);
-                    console.log(rows);
-                    message.channel.send(`Created event with ID ${args[0]}-${rows[1].info.insertId}`);
-                });
-            sqlClient.end();
-            getSchedule();
+                    { shortCode: args[0], adminId: message.author.id }, (err, rows) => {
+                        if (err) throw (err);
+                        console.log(rows);
+                        message.channel.send(`Created event with ID ${args[0]}-${rows[1].info.insertId}`);
+                    });
+                sqlClient.end();
+                getSchedule();
+            } else {
+                message.channel.send(`Unable to find an event with shortcode ${args[0]}.`);
+            }
+        } else {
+            message.channel.send(`Please supply an event shortcode.`);
         }
     }
 
 
     if (command === "schedule") {
         if (args[0]) {
-            let scheduledEvent = schedule.find(o => o.joinCode == args[0]);
-            if (scheduledEvent && (scheduledEvent.adminId === message.author.id)) {
-                if (args[1] && args[2]) {
-                    let creator = registeredUsers.find(o => o.discordId == message.author.id);
+            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+            if (scheduledEvent) {
+                if (scheduledEvent.adminId === message.author.id) {
+                    if (args[1] && args[2]) {
+                        let creator = registeredUsers.find(o => o.discordId == message.author.id);
 
-                    moment.tz.setDefault(creator.timezoneLocale);
-                    let suggestedDateTime = moment.tz(moment(args[2], 'HH:mm').day(args[1]), creator.timezoneLocale);
-                    moment.tz.setDefault();
+                        moment.tz.setDefault(creator.timezoneLocale);
+                        let suggestedDateTime = moment.tz(moment(args[2], 'HH:mm').day(args[1]), creator.timezoneLocale);
+                        moment.tz.setDefault();
 
-                    console.log(suggestedDateTime);
+                        console.log(suggestedDateTime);
 
-                    if (suggestedDateTime < moment().tz(creator.timezoneLocale)) {
-                        message.channel.send('Suggested time is in the past.');
-                        suggestedDateTime.add(7, 'd');
+                        sqlClient.query('UPDATE schedule SET startTime = :suggestedTime WHERE joinCode = :joinCode AND adminId = :userId;',
+                            { suggestedTime: suggestedDateTime.utc().format('YYYY-MM-DD HH:mm:ss'), joinCode: args[0], userId: message.author.id }, (err, rows) => {
+                                if (err) throw (err);
+                                console.log(rows);
+                                message.channel.send(`Set start time of ${args[0]} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
+                            });
+                        sqlClient.end();
+                        getSchedule();
+                    } else {
+                        message.channel.send('Invalid date and time supplied.');
                     }
-
-                    sqlClient.query('UPDATE schedule SET startTime = :suggestedTime WHERE joinCode = :joinCode AND adminId = :userId;',
-                        { suggestedTime: suggestedDateTime.utc().format('YYYY-MM-DD HH:mm:ss'), joinCode: args[0], userId: message.author.id }, (err, rows) => {
-                            if (err) throw (err);
-                            console.log(rows);
-                            message.channel.send(`Set start time of ${args[0]} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
-                        });
-                    sqlClient.end();
-                    getSchedule();
+                } else {
+                    message.channel.send(`You are not the admin of this event - the admin is ${client.users.get(scheduledEvent.adminId).tag}.`);
                 }
+            } else {
+                message.channel.send('Could not find an event with the supplied join code.');
             }
+        } else {
+            message.channel.send('Please supply an event join code.');
         }
     }
 
 
     if (command === "join") {
         if (args[0]) {
-            let scheduledEvent = schedule.find(o => o.joinCode == args[0]);
+            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
             console.log(scheduledEvent);
-            if (scheduledEvent && scheduledEvent.fireteamCount < 7) {
-                sqlClient.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);',
-                    { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId }, (err, rows) => {
-                        if (err) throw (err);
-                        console.log(rows);
-                        if (rows.info.affectedRows > 0) {
-                            message.channel.send(`${message.author} joined ${scheduledEvent.joinCode}`);
-                        } else {
-                            message.channel.send(`${message.author} you are already a member of ${scheduledEvent.joinCode}`);
-                        }
-                    });
-                sqlClient.end();
-                getSchedule();
+            if (scheduledEvent) {
+                if (scheduledEvent.fireteamCount < 6) {
+                    if (scheduledEvent.fireteamMembers.indexOf(message.author.id) <= -1) {
+                        sqlClient.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);',
+                            { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId }, (err, rows) => {
+                                if (err) throw (err);
+                                console.log(rows);
+                                message.channel.send(`${message.author} joined ${scheduledEvent.joinCode}`);
+                            });
+                        sqlClient.end();
+                        getSchedule();
+                    } else {
+                        message.channel.send('You are already a member of this event\'s fireteam.');
+                    }
+                } else {
+                    message.channel.send('This fireteam is currently full.');
+                }
+            } else {
+                message.channel.send('Could not find an event with the supplied join code.');
             }
+        } else {
+            message.channel.send('Please supply an event join code.');
         }
     }
 
 
     if (command === "leave") {
         if (args[0]) {
-            let scheduledEvent = schedule.find(o => o.joinCode == args[0]);
+            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
             if (scheduledEvent) {
                 if (scheduledEvent.adminId != message.author.id) {
                     console.log(scheduledEvent);
@@ -385,29 +396,55 @@ client.on("message", async message => {
                         });
                     sqlClient.end();
                     getSchedule();
+                } else {
+                    message.channel.send('You are the admin of this event - you must elevate another user with the `!admin` command, and then you can leave.');
                 }
+            } else {
+                message.channel.send('Could not find an event with the supplied join code.');
             }
+        } else {
+            message.channel.send('Please supply an event join code.');
         }
     }
 
 
     if (command === "kick") {
         if (args[0]) {
-            let scheduledEvent = schedule.find(o => o.joinCode == args[0]);
-            let userToKick = (args[1] ? client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id : message.author.id);
+            if (args[1]) {
+                let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+                let userToKick = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
 
-            if (scheduledEvent && scheduledEvent.adminId == message.author.id && userToKick != scheduledEvent.adminId) {
-                console.log(scheduledEvent);
-                console.log(userToKick);
-                sqlClient.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
-                    { guardianId: userToKick, fireteamId: scheduledEvent.fireteamId }, (err, rows) => {
-                        if (err) throw (err);
-                        console.log(rows);
-                        message.channel.send(`${message.author} kicked ${client.users.get(userToKick).tag} from ${scheduledEvent.joinCode}.`);
-                    });
-                sqlClient.end();
-                getSchedule();
+                if (scheduledEvent) {
+                    if (scheduledEvent.adminId == message.author.id) {
+                        if (userToKick != message.author.id) {
+                            if (scheduledEvent.fireteamMembers.indexOf(userToKick) <= -1) {
+                                console.log(scheduledEvent);
+                                console.log(userToKick);
+                                sqlClient.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
+                                    { guardianId: userToKick, fireteamId: scheduledEvent.fireteamId }, (err, rows) => {
+                                        if (err) throw (err);
+                                        console.log(rows);
+                                        message.channel.send(`${message.author} kicked ${client.users.get(userToKick).tag} from ${scheduledEvent.joinCode}.`);
+                                    });
+                                sqlClient.end();
+                                getSchedule();
+                            } else {
+                                message.channel.send('The user you are trying to kick is not a member of this event.');
+                            }
+                        } else {
+                            message.channel.send('You cannot kick yourself from an event.');
+                        }
+                    } else {
+                        message.channel.send(`Only admins can kick people from events - please notify ${client.users.get(scheduledEvent.adminId).tag} if you require someone to be kicked.`);
+                    }
+                } else {
+                    message.channel.send('Could not find an event with the supplied join code.');
+                }
+            } else {
+                message.channel.send('Please supply a username to kick from the event.');
             }
+        } else {
+            message.channel.send('Please supply an event join code.');
         }
     }
 
@@ -415,22 +452,34 @@ client.on("message", async message => {
     if (command === "admin") {
         if (args[0]) {
             if (args[1]) {
-                let scheduledEvent = schedule.find(o => o.joinCode == args[0]);
-                let userToMod = (args[1] ? client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id : message.author.id);
+                let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+                let userToMod = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
 
-                console.log(userToMod);
-
-                if (scheduledEvent && scheduledEvent.adminId == message.author.id) {
-                    sqlClient.query('UPDATE schedule SET adminId = :adminId WHERE joinCode = :joinCode;',
-                        { adminId: userToMod, joinCode: scheduledEvent.joinCode }, (err, rows) => {
-                            if (err) throw (err);
-                            console.log(rows);
-                            message.channel.send(`${message.author} has made ${client.users.get(userToMod).tag} the admin of ${scheduledEvent.joinCode}.`);
-                        });
-                    sqlClient.end();
-                    getSchedule();
+                if (scheduledEvent) {
+                    if (scheduledEvent.adminId == message.author.id) {
+                        if (scheduledEvent.fireteamMembers.indexOf(userToMod) > -1) {
+                            sqlClient.query('UPDATE schedule SET adminId = :adminId WHERE joinCode = :joinCode;',
+                                { adminId: userToMod, joinCode: scheduledEvent.joinCode }, (err, rows) => {
+                                    if (err) throw (err);
+                                    console.log(rows);
+                                    message.channel.send(`${message.author} has made ${client.users.get(userToMod).tag} the admin of ${scheduledEvent.joinCode}.`);
+                                });
+                            sqlClient.end();
+                            getSchedule();
+                        } else {
+                            message.channel.send('The user you are trying to make an admin is not a member of this event.');
+                        }
+                    } else {
+                        message.channel.send('You must be the admin of this event to elevate another user.');
+                    }
+                } else {
+                    message.channel.send('Could not find an event with the supplied join code.');
                 }
+            } else {
+                message.channel.send('Please supply a username to give admin rights to.');
             }
+        } else {
+            message.channel.send('Please supply an event join code.');
         }
     }
 
