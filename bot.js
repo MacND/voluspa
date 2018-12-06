@@ -2,7 +2,8 @@
 const Discord = require("discord.js");
 const config = require("./config.json");
 const { google } = require('googleapis');
-const Maria = require("mariasql");
+//const Maria = require("mariasql");
+const mysql = require('mysql2');
 const key = require('./googleApiKey.json');
 const moment = require('moment-timezone');
 moment.locale('en-gb');
@@ -10,12 +11,15 @@ moment.locale('en-gb');
 // Client declarations
 const client = new Discord.Client({ disableEveryone: true });
 const drive = google.drive('v3');
-const sqlClient = new Maria({
+const pool = mysql.createPool({
     host: config.dbhost,
     user: config.dbuser,
     password: config.dbpass,
-    db: config.dbname,
-    multiStatements: true
+    database: config.dbname,
+    waitForConnections: true,
+    connectionLimit: 10,
+    multipleStatements: true,
+    namedPlaceholders: true
 });
 
 const jwtClient = new google.auth.JWT(
@@ -30,38 +34,37 @@ const jwtClient = new google.auth.JWT(
 var events;
 var registeredUsers;
 var schedule;
-var fireteams;
 
 // Functions
 function getUsers() {
-    sqlClient.query('SELECT * FROM users;', (err, rows) => {
+    pool.query('SELECT * FROM users;', (err, rows, fields) => {
         if (err) throw (err);
         console.log('Pulled users from database.');
         registeredUsers = rows;
         delete registeredUsers.info;
     });
-    sqlClient.end();
+
 }
 
 function getEvents() {
-    sqlClient.query('SELECT * FROM events;', (err, rows) => {
+    pool.query('SELECT * FROM events;', (err, rows, fields) => {
         if (err) throw (err);
         console.log('Pulled events from database.');
         events = rows;
         delete events.info;
     });
-    sqlClient.end();
+
 }
 
 function getSchedule() {
-    sqlClient.query('SELECT s.id, s.fireteamId, s.adminId, s.startTime, s.raidReportUrl, s.joinCode, e.shortCode, e.name, TIME_FORMAT(SEC_TO_TIME(e.avgLength), "%k:%i") as avgLength, e.minPower, COUNT(fm.guardianId) AS fireteamCount FROM schedule s INNER JOIN events e ON e.shortCode = s.eventShortCode LEFT JOIN fireteamMembers fm ON fm.fireteamId = s.fireteamId GROUP BY fm.fireteamId;', (err, rows) => {
+    pool.query('SELECT s.id, s.fireteamId, s.adminId, s.startTime, s.raidReportUrl, s.joinCode, e.shortCode, e.name, TIME_FORMAT(SEC_TO_TIME(e.avgLength), "%k:%i") as avgLength, e.minPower, COUNT(fm.guardianId) AS fireteamCount FROM schedule s INNER JOIN events e ON e.shortCode = s.eventShortCode LEFT JOIN fireteamMembers fm ON fm.fireteamId = s.fireteamId GROUP BY fm.fireteamId;', (err, rows, fields) => {
         if (err) throw (err);
         console.log('Pulled schedule from database.');
         schedule = rows;
         delete schedule.info;
 
         for (let i = 0; i < schedule.length; i++) {
-            sqlClient.query('SELECT guardianId FROM fireteamMembers WHERE fireteamId = :fireteamId;', { fireteamId: schedule[i].fireteamId }, { useArray: true }, (err, rows) => {
+            pool.query({ sql: 'SELECT guardianId FROM fireteamMembers WHERE fireteamId = :fireteamId;', rowsAsArray: true }, { fireteamId: schedule[i].fireteamId }, (err, rows, fields) => {
                 if (err) throw (err);
                 delete rows.info;
                 console.log(rows);
@@ -70,7 +73,17 @@ function getSchedule() {
         }
         console.log('Pulled fireteams from database.');
     });
-    sqlClient.end();
+
+    /*
+    for (let i = 0; i < schedule.length; i++) {
+        setTimeout(() => {
+            for (let user in schedule[i].fireteamMembers) {
+                client.users.get(user).send(`You have an event beginning in 15 minutes - ${schedule[i].name} (${schedule[i].joinCode}).`);
+            }
+        }, (moment.duration(schedule[i].startTime.diff(moment())) - 900000));
+    }
+    */
+
 }
 
 getUsers();
@@ -156,7 +169,7 @@ client.on("message", async message => {
                 let createBody = { 'role': 'writer', 'type': 'anyone' };
                 let newFileId;
 
-                sqlClient.query('INSERT INTO users (discordId, bnetId, timezoneLocale) VALUES (:discordId, :bnetId, :timezone);', { discordId: discordId, bnetId: args[0], timezone: args[1] }, function (err, rows) {
+                pool.query('INSERT INTO users (discordId, bnetId, timezoneLocale) VALUES (:discordId, :bnetId, :timezone);', { discordId: discordId, bnetId: args[0], timezone: args[1] }, function (err, rows, fields) {
                     if (err)
                         throw (err);
                     console.log(rows);
@@ -182,14 +195,14 @@ client.on("message", async message => {
                     console.log(permsResponse.data);
                     message.author.send(`Your schedule spreadhseet has been created and is accessible at https://docs.google.com/spreadsheets/d/${newFileId}.  Please keep this link private, as it is shared by URL with no other security.`);
 
-                    sqlClient.query('UPDATE users SET gsheeturl = :gsheeturl WHERE discordId = :discordId;', { discordId: discordId, gsheeturl: newFileId }, (err, rows) => {
+                    pool.query('UPDATE users SET gsheeturl = :gsheeturl WHERE discordId = :discordId;', { discordId: discordId, gsheeturl: newFileId }, (err, rows, fields) => {
                         if (err)
                             throw (err);
                         console.log(rows);
                         console.log('Updated gsheet URL in database.');
                     });
 
-                    sqlClient.end();
+
 
                 } catch (err) {
                     console.log('The API returned an error: ' + err);
@@ -218,13 +231,13 @@ client.on("message", async message => {
         if (user) {
             if (moment.tz.zone(args[0])) {
                 if (args[0] !== user.timezoneLocale) {
-                    sqlClient.query('UPDATE users SET timezoneLocale = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] }, (err, rows) => {
+                    pool.query('UPDATE users SET timezoneLocale = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] }, (err, rows, fields) => {
                         if (err)
                             throw (err);
                         console.log(rows);
                         message.react("✅");
                     });
-                    sqlClient.end();
+
                     getUsers();
                 } else {
                     message.channel.send(`Your timezone is already set to ${args[0]}`);
@@ -244,13 +257,13 @@ client.on("message", async message => {
         if (user) {
             if (args[0].includes('#')) {
                 if (args[0] != user.bnetId) {
-                    sqlClient.query('UPDATE users SET bnetId = :bnet WHERE discordId = :discordId;', { discordId: message.author.id, bnet: args[0] }, (err, rows) => {
+                    pool.query('UPDATE users SET bnetId = :bnet WHERE discordId = :discordId;', { discordId: message.author.id, bnet: args[0] }, (err, rows, fields) => {
                         if (err)
                             throw (err);
                         console.log(rows);
                         message.react("✅");
                     });
-                    sqlClient.end();
+
                     getUsers();
                 } else {
                     message.channel.send(`Your BNet ID is already set to ${args[0]}`);
@@ -289,18 +302,18 @@ client.on("message", async message => {
         if (args[0]) {
             let event = events.find(o => o.shortCode == args[0].toLowerCase());
             if (event) {
-                sqlClient.query(`START TRANSACTION;
+                pool.query(`START TRANSACTION;
                     INSERT INTO schedule (eventShortCode, adminId) VALUES (:shortCode, :adminId);
                     SELECT @scheduleId:=LAST_INSERT_ID();
                     INSERT INTO fireteamMembers(guardianId, fireteamId) VALUES(:adminId, @scheduleId);
                     UPDATE schedule SET joinCode = CONCAT(eventShortCode, '-', id), fireteamId = @scheduleId WHERE id = @scheduleId;
                     COMMIT;`,
-                    { shortCode: args[0], adminId: message.author.id }, (err, rows) => {
+                    { shortCode: args[0], adminId: message.author.id }, (err, rows, fields) => {
                         if (err) throw (err);
                         console.log(rows);
                         message.channel.send(`Created event with ID ${args[0]}-${rows[1].info.insertId}`);
                     });
-                sqlClient.end();
+
                 getSchedule();
             } else {
                 message.channel.send(`Unable to find an event with shortcode ${args[0]}.`);
@@ -325,13 +338,13 @@ client.on("message", async message => {
 
                         console.log(suggestedDateTime);
 
-                        sqlClient.query('UPDATE schedule SET startTime = :suggestedTime WHERE joinCode = :joinCode AND adminId = :userId;',
-                            { suggestedTime: suggestedDateTime.utc().format('YYYY-MM-DD HH:mm:ss'), joinCode: args[0], userId: message.author.id }, (err, rows) => {
+                        pool.query('UPDATE schedule SET startTime = :suggestedTime WHERE joinCode = :joinCode AND adminId = :userId;',
+                            { suggestedTime: suggestedDateTime.utc().format('YYYY-MM-DD HH:mm:ss'), joinCode: args[0], userId: message.author.id }, (err, rows, fields) => {
                                 if (err) throw (err);
                                 console.log(rows);
                                 message.channel.send(`Set start time of ${args[0]} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
                             });
-                        sqlClient.end();
+
                         getSchedule();
                     } else {
                         message.channel.send('Invalid date and time supplied.');
@@ -355,13 +368,13 @@ client.on("message", async message => {
             if (scheduledEvent) {
                 if (scheduledEvent.fireteamCount < 6) {
                     if (scheduledEvent.fireteamMembers.indexOf(message.author.id) <= -1) {
-                        sqlClient.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);',
-                            { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId }, (err, rows) => {
+                        pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);',
+                            { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId }, (err, rows, fields) => {
                                 if (err) throw (err);
                                 console.log(rows);
                                 message.channel.send(`${message.author} joined ${scheduledEvent.joinCode}`);
                             });
-                        sqlClient.end();
+
                         getSchedule();
                     } else {
                         message.channel.send('You are already a member of this event\'s fireteam.');
@@ -384,17 +397,13 @@ client.on("message", async message => {
             if (scheduledEvent) {
                 if (scheduledEvent.adminId != message.author.id) {
                     console.log(scheduledEvent);
-                    sqlClient.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
-                        { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId }, (err, rows) => {
+                    pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
+                        { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId }, (err, rows, fields) => {
                             if (err) throw (err);
                             console.log(rows);
-                            if (rows.info.affectedRows > 0) {
-                                message.channel.send(`${message.author} left ${scheduledEvent.joinCode}`);
-                            } else {
-                                message.channel.send(`${message.author} you are not a member of ${scheduledEvent.joinCode}`);
-                            }
+                            message.channel.send(`${message.author} left ${scheduledEvent.joinCode}`);
                         });
-                    sqlClient.end();
+
                     getSchedule();
                 } else {
                     message.channel.send('You are the admin of this event - you must elevate another user with the `!admin` command, and then you can leave.');
@@ -420,13 +429,13 @@ client.on("message", async message => {
                             if (scheduledEvent.fireteamMembers.indexOf(userToKick) > -1) {
                                 console.log(scheduledEvent);
                                 console.log(userToKick);
-                                sqlClient.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
-                                    { guardianId: userToKick, fireteamId: scheduledEvent.fireteamId }, (err, rows) => {
+                                pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
+                                    { guardianId: userToKick, fireteamId: scheduledEvent.fireteamId }, (err, rows, fields) => {
                                         if (err) throw (err);
                                         console.log(rows);
                                         message.channel.send(`${message.author} kicked ${client.users.get(userToKick).tag} from ${scheduledEvent.joinCode}.`);
                                     });
-                                sqlClient.end();
+
                                 getSchedule();
                             } else {
                                 message.channel.send('The user you are trying to kick is not a member of this event.');
@@ -458,13 +467,13 @@ client.on("message", async message => {
                 if (scheduledEvent) {
                     if (scheduledEvent.adminId == message.author.id) {
                         if (scheduledEvent.fireteamMembers.indexOf(userToMod) > -1) {
-                            sqlClient.query('UPDATE schedule SET adminId = :adminId WHERE joinCode = :joinCode;',
-                                { adminId: userToMod, joinCode: scheduledEvent.joinCode }, (err, rows) => {
+                            pool.query('UPDATE schedule SET adminId = :adminId WHERE joinCode = :joinCode;',
+                                { adminId: userToMod, joinCode: scheduledEvent.joinCode }, (err, rows, fields) => {
                                     if (err) throw (err);
                                     console.log(rows);
                                     message.channel.send(`${message.author} has made ${client.users.get(userToMod).tag} the admin of ${scheduledEvent.joinCode}.`);
                                 });
-                            sqlClient.end();
+
                             getSchedule();
                         } else {
                             message.channel.send('The user you are trying to make an admin is not a member of this event.');
