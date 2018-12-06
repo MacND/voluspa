@@ -7,10 +7,10 @@
     "discord.js": "^11.4.2",
     "forever": "^0.15.3",
     "googleapis": "^35.0.0",
-    "mariasql": "^0.2.6",
     "moment": "^2.22.2",
     "moment-duration-format": "^2.2.2",
     "moment-timezone": "^0.5.21",
+    "mysql2": "^1.6.4",
     "request": "^2.81.0"
   },
   "devDependencies": {},
