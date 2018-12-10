@@ -2,7 +2,6 @@
 const Discord = require("discord.js");
 const config = require("./config.json");
 const { google } = require('googleapis');
-//const Maria = require("mariasql");
 const mysql = require('mysql2');
 const key = require('./googleApiKey.json');
 const moment = require('moment-timezone');
@@ -20,7 +19,7 @@ const pool = mysql.createPool({
     connectionLimit: 10,
     multipleStatements: true,
     namedPlaceholders: true
-});
+}).promise();
 
 const jwtClient = new google.auth.JWT(
     key.client_email,
@@ -34,65 +33,57 @@ const jwtClient = new google.auth.JWT(
 var events;
 var registeredUsers;
 var schedule;
+var timers;
 
 // Functions
-function getUsers() {
-    pool.query('SELECT * FROM users;', (err, rows, fields) => {
-        if (err) throw (err);
-        console.log('Pulled users from database.');
-        registeredUsers = rows;
-        delete registeredUsers.info;
-    });
-
+async function getUsers() {
+    var [rows, fields] = await pool.query('SELECT * FROM users;');
+    registeredUsers = rows;
 }
 
-function getEvents() {
-    pool.query('SELECT * FROM events;', (err, rows, fields) => {
-        if (err) throw (err);
-        console.log('Pulled events from database.');
-        events = rows;
-        delete events.info;
-    });
-
+async function getEvents() {
+    var [rows, fields] = await pool.query('SELECT * FROM events;');
+    events = rows;
 }
 
-function getSchedule() {
-    pool.query('SELECT s.id, s.fireteamId, s.adminId, s.startTime, s.raidReportUrl, s.joinCode, e.shortCode, e.name, TIME_FORMAT(SEC_TO_TIME(e.avgLength), "%k:%i") as avgLength, e.minPower, COUNT(fm.guardianId) AS fireteamCount FROM schedule s INNER JOIN events e ON e.shortCode = s.eventShortCode LEFT JOIN fireteamMembers fm ON fm.fireteamId = s.fireteamId GROUP BY fm.fireteamId;', (err, rows, fields) => {
-        if (err) throw (err);
-        console.log('Pulled schedule from database.');
-        schedule = rows;
-        delete schedule.info;
+async function getSchedule() {
+    var [rows, fields] = await pool.query('SELECT * FROM scheduleView;');
+    schedule = await rows;
 
-        for (let i = 0; i < schedule.length; i++) {
-            pool.query({ sql: 'SELECT guardianId FROM fireteamMembers WHERE fireteamId = :fireteamId;', rowsAsArray: true }, { fireteamId: schedule[i].fireteamId }, (err, rows, fields) => {
-                if (err) throw (err);
-                delete rows.info;
-                console.log(rows);
-                schedule[i].fireteamMembers = [].concat.apply([], rows);
-            });
-        }
-        console.log('Pulled fireteams from database.');
-    });
-
-    /*
     for (let i = 0; i < schedule.length; i++) {
-        setTimeout(() => {
-            for (let user in schedule[i].fireteamMembers) {
-                client.users.get(user).send(`You have an event beginning in 15 minutes - ${schedule[i].name} (${schedule[i].joinCode}).`);
-            }
-        }, (moment.duration(schedule[i].startTime.diff(moment())) - 900000));
+        try {
+            var [rows, fields] = await pool.query({ sql: 'SELECT guardianId FROM fireteamMembers WHERE fireteamId = :fireteamId;', rowsAsArray: true }, { fireteamId: schedule[i].fireteamId });
+            schedule[i].fireteamMembers = [].concat.apply([], rows);
+        } catch (err) {
+            console.log(err);
+            message.reply('An error was thrown while trying to run the command - please check the logs.');
+        }
     }
-    */
-
 }
 
-getUsers();
-getEvents();
-getSchedule();
+function createTimers() {
+    for (let i = 0; i < schedule.length; i++) {
+        let eventStart = moment(schedule[i].startTime);
+        let now = moment();
+
+        for (let j = 0; j < schedule[i].fireteamMembers.length; j++) {
+            console.log(`Creating timer for ${schedule[i].fireteamMembers[j]} in ${schedule[i].joinCode}`);
+            let userId = schedule[i].fireteamMembers[j];
+            setTimeout(() => {
+                client.users.get(userId).send(`You have an event beginning in 15 minutes - ${schedule[i].joinCode}`);
+            }, moment.duration(eventStart.diff(now)).asMilliseconds() - 900000);
+        }
+
+    }
+}
+
 
 client.on("ready", async () => {
     console.log(`Successfully connected to Discord`);
     client.user.setActivity(config.status);
+    getUsers();
+    getEvents();
+    getSchedule().then(createTimers);
 });
 
 jwtClient.authorize((err, tokens) => {
@@ -121,6 +112,12 @@ client.on("message", async message => {
         client.destroy();
     }
 
+
+    if (command === "print") {
+        console.log(events);
+        console.log(registeredUsers);
+        console.log(schedule);
+    }
 
     if (command === "eventinfo") {
         if (args[0]) {
@@ -169,7 +166,7 @@ client.on("message", async message => {
                 let createBody = { 'role': 'writer', 'type': 'anyone' };
                 let newFileId;
 
-                pool.query('INSERT INTO users (discordId, bnetId, timezoneLocale) VALUES (:discordId, :bnetId, :timezone);', { discordId: discordId, bnetId: args[0], timezone: args[1] }, function (err, rows, fields) {
+                pool.query('INSERT INTO users (discordId, bnetId, timezoneLocale) VALUES (:discordId, :bnetId, :timezone);', { discordId: discordId, bnetId: args[0], timezone: args[1] }, function (err, rows) {
                     if (err)
                         throw (err);
                     console.log(rows);
@@ -195,7 +192,7 @@ client.on("message", async message => {
                     console.log(permsResponse.data);
                     message.author.send(`Your schedule spreadhseet has been created and is accessible at https://docs.google.com/spreadsheets/d/${newFileId}.  Please keep this link private, as it is shared by URL with no other security.`);
 
-                    pool.query('UPDATE users SET gsheeturl = :gsheeturl WHERE discordId = :discordId;', { discordId: discordId, gsheeturl: newFileId }, (err, rows, fields) => {
+                    pool.query('UPDATE users SET gsheeturl = :gsheeturl WHERE discordId = :discordId;', { discordId: discordId, gsheeturl: newFileId }, (err, rows) => {
                         if (err)
                             throw (err);
                         console.log(rows);
@@ -231,14 +228,13 @@ client.on("message", async message => {
         if (user) {
             if (moment.tz.zone(args[0])) {
                 if (args[0] !== user.timezoneLocale) {
-                    pool.query('UPDATE users SET timezoneLocale = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] }, (err, rows, fields) => {
+                    pool.query('UPDATE users SET timezoneLocale = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] }, (err, rows) => {
                         if (err)
                             throw (err);
                         console.log(rows);
                         message.react("✅");
+                        getUsers;
                     });
-
-                    getUsers();
                 } else {
                     message.channel.send(`Your timezone is already set to ${args[0]}`);
                 }
@@ -257,7 +253,7 @@ client.on("message", async message => {
         if (user) {
             if (args[0].includes('#')) {
                 if (args[0] != user.bnetId) {
-                    pool.query('UPDATE users SET bnetId = :bnet WHERE discordId = :discordId;', { discordId: message.author.id, bnet: args[0] }, (err, rows, fields) => {
+                    pool.query('UPDATE users SET bnetId = :bnet WHERE discordId = :discordId;', { discordId: message.author.id, bnet: args[0] }, (err, rows) => {
                         if (err)
                             throw (err);
                         console.log(rows);
@@ -292,7 +288,7 @@ client.on("message", async message => {
     if (command === "refresh" && message.author.id === '79711200312557568') {
         getEvents();
         getUsers();
-        getSchedule();
+        getSchedule().then(createTimers);
         message.react("✅");
         console.log('Refreshed cache.');
     }
@@ -302,19 +298,22 @@ client.on("message", async message => {
         if (args[0]) {
             let event = events.find(o => o.shortCode == args[0].toLowerCase());
             if (event) {
-                pool.query(`START TRANSACTION;
-                    INSERT INTO schedule (eventShortCode, adminId) VALUES (:shortCode, :adminId);
-                    SELECT @scheduleId:=LAST_INSERT_ID();
-                    INSERT INTO fireteamMembers(guardianId, fireteamId) VALUES(:adminId, @scheduleId);
-                    UPDATE schedule SET joinCode = CONCAT(eventShortCode, '-', id), fireteamId = @scheduleId WHERE id = @scheduleId;
-                    COMMIT;`,
-                    { shortCode: args[0], adminId: message.author.id }, (err, rows, fields) => {
-                        if (err) throw (err);
-                        console.log(rows);
-                        message.channel.send(`Created event with ID ${args[0]}-${rows[1].info.insertId}`);
-                    });
+                try {
+                    var [rows, fields] = await pool.query(`
+                        START TRANSACTION; 
+                        INSERT INTO schedule (eventShortCode, adminId) VALUES (:shortCode, :adminId);
+                        SELECT @scheduleId:=LAST_INSERT_ID();
+                        INSERT INTO fireteamMembers(guardianId, fireteamId) VALUES(:adminId, @scheduleId);
+                        UPDATE schedule SET joinCode = CONCAT(eventShortCode, '-', id), fireteamId = @scheduleId WHERE id = @scheduleId;
+                        COMMIT;`,
+                        { shortCode: args[0], adminId: message.author.id });
+                    message.reply(`Created event with ID ${args[0]}-${rows[1].insertId}`);
+                    getSchedule();
+                } catch (err) {
+                    console.log(err);
+                    message.reply('An error was thrown while trying to run the command - please check the logs.');
+                }
 
-                getSchedule();
             } else {
                 message.channel.send(`Unable to find an event with shortcode ${args[0]}.`);
             }
@@ -336,27 +335,31 @@ client.on("message", async message => {
                         let suggestedDateTime = moment.tz(moment(args[2], 'HH:mm').day(args[1]), creator.timezoneLocale);
                         moment.tz.setDefault();
 
-                        console.log(suggestedDateTime);
+                        if (suggestedDateTime < moment().tz(creator.timezoneLocale)) {
+                            suggestedDateTime.add(7, 'd');
+                        }
 
-                        pool.query('UPDATE schedule SET startTime = :suggestedTime WHERE joinCode = :joinCode AND adminId = :userId;',
-                            { suggestedTime: suggestedDateTime.utc().format('YYYY-MM-DD HH:mm:ss'), joinCode: args[0], userId: message.author.id }, (err, rows, fields) => {
-                                if (err) throw (err);
-                                console.log(rows);
-                                message.channel.send(`Set start time of ${args[0]} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
-                            });
+                        try {
+                            var [rows, fields] = await pool.query('UPDATE schedule SET startTime = :suggestedTime WHERE joinCode = :joinCode AND adminId = :userId;', { suggestedTime: suggestedDateTime.utc().format('YYYY-MM-DD HH:mm:ss'), joinCode: args[0], userId: message.author.id });
+                            console.log(rows);
+                            message.reply(`Set start time of ${args[0]} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
+                            getSchedule().then(createTimers);
+                        } catch (err) {
+                            console.log(err);
+                            message.reply('An error was thrown while trying to run the command - please check the logs.');
+                        }
 
-                        getSchedule();
                     } else {
-                        message.channel.send('Invalid date and time supplied.');
+                        message.reply('Invalid date and time supplied.');
                     }
                 } else {
-                    message.channel.send(`You are not the admin of this event - the admin is ${client.users.get(scheduledEvent.adminId).tag}.`);
+                    message.reply(`You are not the admin of this event - the admin is ${client.users.get(scheduledEvent.adminId).tag}.`);
                 }
             } else {
-                message.channel.send('Could not find an event with the supplied join code.');
+                message.reply('Could not find an event with the supplied join code.');
             }
         } else {
-            message.channel.send('Please supply an event join code.');
+            message.reply('Please supply an event join code.');
         }
     }
 
@@ -368,25 +371,26 @@ client.on("message", async message => {
             if (scheduledEvent) {
                 if (scheduledEvent.fireteamCount < 6) {
                     if (scheduledEvent.fireteamMembers.indexOf(message.author.id) <= -1) {
-                        pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);',
-                            { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId }, (err, rows, fields) => {
-                                if (err) throw (err);
-                                console.log(rows);
-                                message.channel.send(`${message.author} joined ${scheduledEvent.joinCode}`);
-                            });
-
-                        getSchedule();
+                        try {
+                            var [rows, fields] = await pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);', { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId });
+                            console.log(rows);
+                            message.reply(`you have joined ${scheduledEvent.joinCode}`);
+                            getSchedule().then(createTimers);
+                        } catch (err) {
+                            console.log(err);
+                            message.reply('An error was thrown while trying to run the command - please check the logs.');
+                        }
                     } else {
-                        message.channel.send('You are already a member of this event\'s fireteam.');
+                        message.reply('You are already a member of this event\'s fireteam.');
                     }
                 } else {
-                    message.channel.send('This fireteam is currently full.');
+                    message.reply('This fireteam is currently full.');
                 }
             } else {
-                message.channel.send('Could not find an event with the supplied join code.');
+                message.reply('Could not find an event with the supplied join code.');
             }
         } else {
-            message.channel.send('Please supply an event join code.');
+            message.reply('Please supply an event join code.');
         }
     }
 
@@ -396,23 +400,23 @@ client.on("message", async message => {
             let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
             if (scheduledEvent) {
                 if (scheduledEvent.adminId != message.author.id) {
-                    console.log(scheduledEvent);
-                    pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
-                        { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId }, (err, rows, fields) => {
-                            if (err) throw (err);
-                            console.log(rows);
-                            message.channel.send(`${message.author} left ${scheduledEvent.joinCode}`);
-                        });
-
-                    getSchedule();
+                    try {
+                        var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;', { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId });
+                        console.log(rows);
+                        message.reply(`left ${scheduledEvent.joinCode}`);
+                        getSchedule().then(createTimers);
+                    } catch (err) {
+                        console.log(err);
+                        message.reply('An error was thrown while trying to run the command - please check the logs.');
+                    }
                 } else {
-                    message.channel.send('You are the admin of this event - you must elevate another user with the `!admin` command, and then you can leave.');
+                    message.reply('You are the admin of this event - you must elevate another user with the `!admin` command, and then you can leave.');
                 }
             } else {
-                message.channel.send('Could not find an event with the supplied join code.');
+                message.reply('Could not find an event with the supplied join code.');
             }
         } else {
-            message.channel.send('Please supply an event join code.');
+            message.reply('Please supply an event join code.');
         }
     }
 
@@ -427,33 +431,32 @@ client.on("message", async message => {
                     if (scheduledEvent.adminId == message.author.id) {
                         if (userToKick != message.author.id) {
                             if (scheduledEvent.fireteamMembers.indexOf(userToKick) > -1) {
-                                console.log(scheduledEvent);
-                                console.log(userToKick);
-                                pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
-                                    { guardianId: userToKick, fireteamId: scheduledEvent.fireteamId }, (err, rows, fields) => {
-                                        if (err) throw (err);
-                                        console.log(rows);
-                                        message.channel.send(`${message.author} kicked ${client.users.get(userToKick).tag} from ${scheduledEvent.joinCode}.`);
-                                    });
-
-                                getSchedule();
+                                try {
+                                    var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;', { guardianId: userToKick, fireteamId: scheduledEvent.fireteamId });
+                                    console.log(rows);
+                                    message.reply(`kicked ${client.users.get(userToKick).tag} from ${scheduledEvent.joinCode}.`);
+                                    getSchedule().then(createTimers);
+                                } catch (err) {
+                                    console.log(err);
+                                    message.reply('An error was thrown while trying to run the command - please check the logs.');
+                                }
                             } else {
-                                message.channel.send('The user you are trying to kick is not a member of this event.');
+                                message.reply('The user you are trying to kick is not a member of this event.');
                             }
                         } else {
-                            message.channel.send('You cannot kick yourself from an event.');
+                            message.reply('You cannot kick yourself from an event.');
                         }
                     } else {
-                        message.channel.send(`Only admins can kick people from events - please notify ${client.users.get(scheduledEvent.adminId).tag} if you require someone to be kicked.`);
+                        message.reply(`Only admins can kick people from events - please notify ${client.users.get(scheduledEvent.adminId).tag} if you require someone to be kicked.`);
                     }
                 } else {
-                    message.channel.send('Could not find an event with the supplied join code.');
+                    message.reply('Could not find an event with the supplied join code.');
                 }
             } else {
-                message.channel.send('Please supply a username to kick from the event.');
+                message.reply('Please supply a username to kick from the event.');
             }
         } else {
-            message.channel.send('Please supply an event join code.');
+            message.reply('Please supply an event join code.');
         }
     }
 
@@ -467,28 +470,29 @@ client.on("message", async message => {
                 if (scheduledEvent) {
                     if (scheduledEvent.adminId == message.author.id) {
                         if (scheduledEvent.fireteamMembers.indexOf(userToMod) > -1) {
-                            pool.query('UPDATE schedule SET adminId = :adminId WHERE joinCode = :joinCode;',
-                                { adminId: userToMod, joinCode: scheduledEvent.joinCode }, (err, rows, fields) => {
-                                    if (err) throw (err);
-                                    console.log(rows);
-                                    message.channel.send(`${message.author} has made ${client.users.get(userToMod).tag} the admin of ${scheduledEvent.joinCode}.`);
-                                });
-
-                            getSchedule();
+                            try {
+                                var [rows, fields] = await pool.query('UPDATE schedule SET adminId = :adminId WHERE joinCode = :joinCode;', { adminId: userToMod, joinCode: scheduledEvent.joinCode });
+                                console.log(rows);
+                                message.reply(`has made ${client.users.get(userToMod).tag} the admin of ${scheduledEvent.joinCode}.`);
+                                getSchedule();
+                            } catch {
+                                console.log(err);
+                                message.reply('An error was thrown while trying to run the command - please check the logs.');
+                            }
                         } else {
-                            message.channel.send('The user you are trying to make an admin is not a member of this event.');
+                            message.reply('The user you are trying to make an admin is not a member of this event.');
                         }
                     } else {
-                        message.channel.send('You must be the admin of this event to elevate another user.');
+                        message.reply('You must be the admin of this event to elevate another user.');
                     }
                 } else {
-                    message.channel.send('Could not find an event with the supplied join code.');
+                    message.reply('Could not find an event with the supplied join code.');
                 }
             } else {
-                message.channel.send('Please supply a username to give admin rights to.');
+                message.reply('Please supply a username to give admin rights to.');
             }
         } else {
-            message.channel.send('Please supply an event join code.');
+            message.reply('Please supply an event join code.');
         }
     }
 
