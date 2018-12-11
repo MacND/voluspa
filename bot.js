@@ -10,6 +10,7 @@ moment.locale('en-gb');
 // Client declarations
 const client = new Discord.Client({ disableEveryone: true });
 const drive = google.drive('v3');
+const sheets = google.sheets('v4');
 const pool = mysql.createPool({
     host: config.dbhost,
     user: config.dbuser,
@@ -33,7 +34,7 @@ const jwtClient = new google.auth.JWT(
 var events;
 var registeredUsers;
 var schedule;
-var timers;
+var timers = [];
 
 // Functions
 async function getUsers() {
@@ -62,19 +63,23 @@ async function getSchedule() {
 }
 
 function createTimers() {
+    /*
     for (let i = 0; i < schedule.length; i++) {
         let eventStart = moment(schedule[i].startTime);
         let now = moment();
-
-        for (let j = 0; j < schedule[i].fireteamMembers.length; j++) {
-            console.log(`Creating timer for ${schedule[i].fireteamMembers[j]} in ${schedule[i].joinCode}`);
-            let userId = schedule[i].fireteamMembers[j];
-            setTimeout(() => {
-                client.users.get(userId).send(`You have an event beginning in 15 minutes - ${schedule[i].joinCode}`);
-            }, moment.duration(eventStart.diff(now)).asMilliseconds() - 900000);
+        if (eventStart.isAfter(now)) {
+            console.log(`${now} is after ${eventStart}`);
+            for (let j = 0; j < schedule[i].fireteamMembers.length; j++) {
+                console.log(`Creating timer for ${schedule[i].fireteamMembers[j]} in ${schedule[i].joinCode}`);
+                let userId = schedule[i].fireteamMembers[j];
+                setTimeout(() => {
+                    client.users.get(userId).send(`You have an event beginning in 15 minutes - ${schedule[i].joinCode}`);
+                }, moment.duration(eventStart.diff(now)).asMilliseconds() - 900000);
+            }
         }
 
     }
+    */
 }
 
 
@@ -102,8 +107,8 @@ client.on("message", async message => {
     const args = message.content.slice(config.prefix.length).trim().split(/ +/g);
     const command = args.shift().toLowerCase();
 
-    if (command === "ping") {
-        message.channel.send('Eyes up, Guardian.');
+    if (command === "info") {
+        message.channel.send(`The Oracle Engine v1.0 - https://github.com/macnd/the-oracle-engine`);
     }
 
 
@@ -112,12 +117,6 @@ client.on("message", async message => {
         client.destroy();
     }
 
-
-    if (command === "print") {
-        console.log(events);
-        console.log(registeredUsers);
-        console.log(schedule);
-    }
 
     if (command === "eventinfo") {
         if (args[0]) {
@@ -141,7 +140,7 @@ client.on("message", async message => {
     }
 
 
-    if (command === "register" && args[0] && args[1] && message.channel.id === '494459395888119809') {
+    if (command === "register" && args[0] && args[1]) {
         let user = registeredUsers.find(o => o.discordId == message.author.id),
             response;
 
@@ -149,7 +148,7 @@ client.on("message", async message => {
             try {
                 response = await drive.files.list({
                     auth: jwtClient,
-                    q: `name = '${args[0]}' AND '${config.driveFolderId}' in parents`
+                    q: `name = '${message.author.id}' AND '${config.driveFolderId}' in parents`
                 });
                 console.log(response.data);
             }
@@ -166,12 +165,15 @@ client.on("message", async message => {
                 let createBody = { 'role': 'writer', 'type': 'anyone' };
                 let newFileId;
 
-                pool.query('INSERT INTO users (discordId, bnetId, timezoneLocale) VALUES (:discordId, :bnetId, :timezone);', { discordId: discordId, bnetId: args[0], timezone: args[1] }, function (err, rows) {
-                    if (err)
-                        throw (err);
+                try {
+                    [rows, fields] = await pool.query('INSERT INTO users (discordId, bnetId, timezoneLocale) VALUES (:discordId, :bnetId, :timezone);', { discordId: discordId, bnetId: args[0], timezone: args[1] });
                     console.log(rows);
                     message.channel.send(`${message.author} registered BNet tag ${bnetId} with timezone ${timezone}`);
-                });
+                } catch (err) {
+                    console.log(err);
+                    message.reply('An error was thrown while trying to run the command - please check the logs.');
+                }
+
 
                 try {
                     copyResponse = await drive.files.copy({
@@ -190,20 +192,42 @@ client.on("message", async message => {
                     });
 
                     console.log(permsResponse.data);
-                    message.author.send(`Your schedule spreadhseet has been created and is accessible at https://docs.google.com/spreadsheets/d/${newFileId}.  Please keep this link private, as it is shared by URL with no other security.`);
+                    message.author.send(`Your schedule spreadsheet has been created and is accessible at https://docs.google.com/spreadsheets/d/${newFileId}.  Please keep this link private, as it is shared by URL with no other security.`);
 
-                    pool.query('UPDATE users SET gsheeturl = :gsheeturl WHERE discordId = :discordId;', { discordId: discordId, gsheeturl: newFileId }, (err, rows) => {
-                        if (err)
-                            throw (err);
+
+                    try {
+                        [rows, fields] = await pool.query('UPDATE users SET gsheeturl = :gsheeturl WHERE discordId = :discordId;', { discordId: discordId, gsheeturl: newFileId });
                         console.log(rows);
                         console.log('Updated gsheet URL in database.');
-                    });
-
-
+                    } catch (err) {
+                        console.log(err);
+                        message.reply('An error was thrown while trying to run the command - please check the logs.');
+                    }
 
                 } catch (err) {
                     console.log('The API returned an error: ' + err);
                     message.channel.send(`${message.author} error: there was an error while trying to register.  Please contact an admin.`);
+                }
+
+                try {
+                    let sheetResponse = await sheets.spreadsheets.batchUpdate({
+                        auth: jwtClient,
+                        spreadsheetId: newFileId,
+                        resource: {
+                            "requests": [{
+                                "updateSpreadsheetProperties": {
+                                    "properties": {
+                                        "timeZone": `${timezone}`,
+                                        "title": `${discordId}`
+                                    },
+                                    "fields": "*"
+                                }
+                            }]
+                        }
+                    });
+                    console.log(sheetResponse.data);
+                } catch (err) {
+                    console.log('The API returned an error: ' + err);
                 }
 
                 getUsers();
@@ -217,7 +241,7 @@ client.on("message", async message => {
     }
 
 
-    if (command === "timezone") {
+    if (command === "tz" || command === "timezone") {
         let user = registeredUsers.find(o => o.discordId == message.author.id);
 
         if (args[0] === 'help') {
@@ -228,13 +252,29 @@ client.on("message", async message => {
         if (user) {
             if (moment.tz.zone(args[0])) {
                 if (args[0] !== user.timezoneLocale) {
-                    pool.query('UPDATE users SET timezoneLocale = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] }, (err, rows) => {
-                        if (err)
-                            throw (err);
-                        console.log(rows);
+                    try {
+                        let [rows, fields] = await pool.query('UPDATE users SET timezoneLocale = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] });
+                        let sheetResponse = await sheets.spreadsheets.batchUpdate({
+                            auth: jwtClient,
+                            spreadsheetId: user.gsheeturl,
+                            resource: {
+                                "requests": [{
+                                    "updateSpreadsheetProperties": {
+                                        "properties": {
+                                            "timeZone": `${args[0]}`,
+                                            "title": `${user.discordId}`
+                                        },
+                                        "fields": "*"
+                                    }
+                                }]
+                            }
+                        });
                         message.react("✅");
-                        getUsers;
-                    });
+                        console.log(sheetResponse.data);
+                        getUsers();
+                    } catch (err) {
+                        console.log('ERROR: ' + err);
+                    }
                 } else {
                     message.channel.send(`Your timezone is already set to ${args[0]}`);
                 }
@@ -247,7 +287,7 @@ client.on("message", async message => {
     }
 
 
-    if (command === "bnet") {
+    if (command === "bnet" || command === "battlenet") {
         let user = registeredUsers.find(o => o.discordId == message.author.id);
 
         if (user) {
@@ -506,7 +546,6 @@ client.on("message", async message => {
 
         message.channel.send((messageString ? `\`\`\`${messageString.trim()}\`\`\`` : "No events scheduled."));
     }
-
 
 });
 
