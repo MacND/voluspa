@@ -4,6 +4,7 @@ const config = require("./config.json");
 const { google } = require('googleapis');
 const mysql = require('mysql2');
 const key = require('./googleApiKey.json');
+const AvailabilitySchedule = require('availability-schedule');
 const moment = require('moment-timezone');
 moment.locale('en-gb');
 
@@ -104,7 +105,11 @@ client.on("message", async message => {
     if (message.author.bot) return;
     if (message.content.indexOf(config.prefix) !== 0) return;
 
-    const args = message.content.slice(config.prefix.length).trim().split(/ +/g);
+    const args = message.content.slice(config.prefix.length).trim().match(/(".*?"|[^"\s]+)+(?=\s*|\s*$)/g);
+    args.forEach((arg, index) => {
+        args[index] = arg.replace(/"/g, "");
+    });
+
     const command = args.shift().toLowerCase();
 
     if (command === "info") {
@@ -128,7 +133,7 @@ client.on("message", async message => {
                     .setDescription(`\"*${event.eventTagline}*\"\n${event.eventDescription}\n\`\`\`Short code: ${event.shortCode}\nRecommended power: ${event.minPower}\nAverage length: ${moment().startOf('day').seconds(event.avgLength).format('H:mm')}\n\`\`\``)
                     .setURL(`${event.wikiLink}`)
                     .setThumbnail(`https://gamezone.cool/img/${event.shortCode}.png`)
-                    .setFooter(`Gather your Fireteam - !suggest ${event.shortCode}`)
+                    .setFooter(`Gather your Fireteam - !make ${event.shortCode}`)
 
                 message.channel.send(embed);
             } else {
@@ -536,6 +541,36 @@ client.on("message", async message => {
         }
     }
 
+    if (command === "cancel") {
+        if (args[0]) {
+            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+
+            if (scheduledEvent) {
+                if (scheduledEvent.adminId == message.author.id) {
+                    try {
+                        var [rows, fields] = await pool.query(`
+                                START TRANSACTION;
+                                DELETE FROM fireteamMembers WHERE fireteamId = :fireteamId;
+                                DELETE FROM schedule WHERE id = :scheduleId;
+                                COMMIT;`, { scheduleId: scheduledEvent.id, fireteamId: scheduledEvent.fireteamId });
+                        console.log(rows);
+                        message.reply(`cancelled ${scheduledEvent.joinCode}.`);
+                        getSchedule().then(createTimers);
+                    } catch (err) {
+                        console.log(err);
+                        message.reply('An error was thrown while trying to run the command - please check the logs.');
+                    }
+                } else {
+                    message.reply(`Only admins can cancel events - please notify ${client.users.get(scheduledEvent.adminId).tag} to cancel this event.`);
+                }
+            } else {
+                message.reply('Could not find an event with the supplied join code.');
+            }
+        } else {
+            message.reply('Please supply an event join code.');
+        }
+    }
+
 
     if (command === "next") {
         let creator = registeredUsers.find(o => o.discordId == message.author.id);
@@ -545,6 +580,18 @@ client.on("message", async message => {
         });
 
         message.channel.send((messageString ? `\`\`\`${messageString.trim()}\`\`\`` : "No events scheduled."));
+    }
+
+
+    if (command === "proud") {
+        let emoji = client.emojis.find(emoji => emoji.name === "MadeShaxxProud");
+        message.react(emoji.id);
+    }
+
+
+    if (command === "invite") {
+        message.author.send(`You can invite me to a server you manage by using this link - ${config.invite}`);
+        message.react("✅");
     }
 
 });

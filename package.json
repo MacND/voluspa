@@ -4,6 +4,7 @@
   "description": "A Discord.js bot to help with arranging raids and get D2 character stats inside Discord.",
   "main": "bot.js",
   "dependencies": {
+    "availability-schedule": "^1.0.2",
     "discord.js": "^11.4.2",
     "forever": "^0.15.3",
     "googleapis": "^35.0.0",
