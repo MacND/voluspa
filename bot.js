@@ -84,19 +84,21 @@ let Timer = {
 
 function createTimers() {
     for (let i = 0; i < schedule.length; i++) {
-        let eventStart = moment(schedule[i].startTime);
-        let now = moment();
-        let members = "";
-        let activityData = events.find(o => o.shortCode == schedule[i].shortCode);
-        console.log(activityData);
+        if (schedule[i].startTime) {
+            let eventStart = moment(schedule[i].startTime);
+            let now = moment();
+            let members = "";
+            let activityData = events.find(o => o.shortCode == schedule[i].shortCode);
+            console.log(activityData);
 
-        schedule[i].fireteamMembers.forEach((member, index) => {
-            members += `${client.users.get(member)} `;
-        });
+            schedule[i].fireteamMembers.forEach((member, index) => {
+                members += `${client.users.get(member)} `;
+            });
 
-        Timer.set(schedule[i].joinCode, () => {
-            client.channels.get('517651218961530888').send(`Alerting ${members.trim()}\nYou have an event beginning in 15 minutes, at ${moment(schedule[i].startTime).format('MMMM Do HH:mm')} - **${schedule[i].joinCode}** (${activityData.name} ${activityData.eventType}) - Approx. ${activityData.avgLength}`);
-        }, moment.duration(eventStart.diff(now)).asMilliseconds() - 900000);
+            Timer.set(schedule[i].joinCode, () => {
+                client.channels.get('517651218961530888').send(`Alerting ${members.trim()}\nYou have an event beginning in 15 minutes, at ${moment(schedule[i].startTime).format('MMMM Do HH:mm')} - **${schedule[i].joinCode}** (${activityData.name} ${activityData.eventType}) - Approx. ${activityData.avgLength}`);
+            }, moment.duration(eventStart.diff(now)).asMilliseconds() - 900000);
+        }
     }
 }
 
@@ -130,7 +132,7 @@ client.on("message", async message => {
     const command = args.shift().toLowerCase();
 
     if (command === "info") {
-        message.channel.send(`The Oracle Engine v1.0 - https://github.com/macnd/the-oracle-engine`);
+        message.channel.send(`The Oracle Engine v1.0 - <https://github.com/macnd/the-oracle-engine>`);
     }
 
 
@@ -660,6 +662,55 @@ client.on("message", async message => {
                 }
             } else {
                 message.reply('Could not find an event with the supplied join code.');
+            }
+        } else {
+            message.reply('Please supply an event join code.');
+        }
+    }
+
+
+    if (command === "add") {
+        if (args[0]) {
+            if (args[1]) {
+                let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+                let userToAdd = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
+
+                if (scheduledEvent) {
+                    if (scheduledEvent.adminId == message.author.id) {
+                        if (userToAdd != message.author.id) {
+                            if (scheduledEvent.fireteamMembers.indexOf(userToAdd) <= -1) {
+                                if (scheduledEvent.fireteamCount < 6) {
+                                    if (registeredUsers.find(o => o.discordId == userToAdd)) {
+                                        try {
+                                            var [rows, fields] = await pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);',
+                                                { guardianId: userToAdd, fireteamId: scheduledEvent.fireteamId });
+                                            console.log(rows);
+                                            message.reply(`added ${client.users.get(userToAdd).tag} to ${scheduledEvent.joinCode}.`);
+                                            getSchedule().then(createTimers);
+                                        } catch (err) {
+                                            console.log(err);
+                                            message.reply('An error was thrown while trying to run the command - please check the logs.');
+                                        }
+                                    } else {
+                                        message.reply('Unable to add user as they are not registered.');
+                                    }
+                                } else {
+                                    message.reply('The fireteam for this event is full.');
+                                }
+                            } else {
+                                message.reply('The user you are trying to add is already a member of this event.');
+                            }
+                        } else {
+                            message.reply('You cannot add yourself to an event.');
+                        }
+                    } else {
+                        message.reply(`Only admins can add people to events - please notify ${client.users.get(scheduledEvent.adminId).tag} if you require someone to be added.`);
+                    }
+                } else {
+                    message.reply('Could not find an event with the supplied join code.');
+                }
+            } else {
+                message.reply('Please supply a username to kick from the event.');
             }
         } else {
             message.reply('Please supply an event join code.');
