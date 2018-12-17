@@ -35,17 +35,18 @@ const jwtClient = new google.auth.JWT(
 var events;
 var registeredUsers;
 var schedule;
-var timers = [];
 
 // Functions
 async function getUsers() {
     var [rows, fields] = await pool.query('SELECT * FROM users;');
-    registeredUsers = rows;
+    registeredUsers = await rows;
+    console.log(registeredUsers);
 }
 
 async function getEvents() {
     var [rows, fields] = await pool.query('SELECT * FROM events;');
-    events = rows;
+    events = await rows;
+    console.log(events);
 }
 
 async function getSchedule() {
@@ -61,26 +62,42 @@ async function getSchedule() {
             message.reply('An error was thrown while trying to run the command - please check the logs.');
         }
     }
+    console.log(schedule);
+}
+
+let Timer = {
+    map: new Map(),
+    set: (key, func, time) => {
+        if (time instanceof Date) {
+            time = time.getTime() - Date.now();
+        }
+        if (time < 0) {
+            throw new Error("Can't set timer in the past");
+        }
+        Timer.cancel(key);
+        Timer.map.set(key, setTimeout(func, time));
+    },
+    cancel: key => {
+        clearTimeout(Timer.map.get(key));
+    }
 }
 
 function createTimers() {
-    /*
     for (let i = 0; i < schedule.length; i++) {
         let eventStart = moment(schedule[i].startTime);
         let now = moment();
-        if (eventStart.isAfter(now)) {
-            console.log(`${now} is after ${eventStart}`);
-            for (let j = 0; j < schedule[i].fireteamMembers.length; j++) {
-                console.log(`Creating timer for ${schedule[i].fireteamMembers[j]} in ${schedule[i].joinCode}`);
-                let userId = schedule[i].fireteamMembers[j];
-                setTimeout(() => {
-                    client.users.get(userId).send(`You have an event beginning in 15 minutes - ${schedule[i].joinCode}`);
-                }, moment.duration(eventStart.diff(now)).asMilliseconds() - 900000);
-            }
-        }
+        let members = "";
+        let activityData = events.find(o => o.shortCode == schedule[i].shortCode);
+        console.log(activityData);
 
+        schedule[i].fireteamMembers.forEach((member, index) => {
+            members += `${client.users.get(member)} `;
+        });
+
+        Timer.set(schedule[i].joinCode, () => {
+            client.channels.get('517651218961530888').send(`Alerting ${members.trim()}\nYou have an event beginning in 15 minutes, at ${moment(schedule[i].startTime).format('MMMM Do HH:mm')} - **${schedule[i].joinCode}** (${activityData.name} ${activityData.eventType}) - Approx. ${activityData.avgLength}`);
+        }, moment.duration(eventStart.diff(now)).asMilliseconds() - 900000);
     }
-    */
 }
 
 
@@ -409,33 +426,52 @@ client.on("message", async message => {
     }
 
 
+    if (command === "members") {
+        if (args[0]) {
+            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+            if (scheduledEvent) {
+                let messageString = "";
+                scheduledEvent.fireteamMembers.forEach((member, index) => {
+                    messageString += `${client.users.get(member).tag}${(member == scheduledEvent.adminId ? " (Admin)" : "")}\n`;
+                });
+                message.channel.send(`Fireteam for ${args[0]}\n\`\`\`${messageString}\`\`\``);
+            }
+        }
+    }
+
+
     if (command === "join") {
         if (args[0]) {
             let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+            let user = registeredUsers.find(o => o.discordId == message.author.id);
             console.log(scheduledEvent);
-            if (scheduledEvent) {
-                if (scheduledEvent.fireteamCount < 6) {
-                    if (scheduledEvent.fireteamMembers.indexOf(message.author.id) <= -1) {
-                        try {
-                            var [rows, fields] = await pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);', { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId });
-                            console.log(rows);
-                            message.reply(`you have joined ${scheduledEvent.joinCode}`);
-                            getSchedule().then(createTimers);
-                        } catch (err) {
-                            console.log(err);
-                            message.reply('An error was thrown while trying to run the command - please check the logs.');
+            if (user) {
+                if (scheduledEvent) {
+                    if (scheduledEvent.fireteamCount < 6) {
+                        if (scheduledEvent.fireteamMembers.indexOf(message.author.id) <= -1) {
+                            try {
+                                var [rows, fields] = await pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);', { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId });
+                                console.log(rows);
+                                message.reply(`you have joined ${scheduledEvent.joinCode}`);
+                                getSchedule().then(createTimers);
+                            } catch (err) {
+                                console.log(err);
+                                message.reply('an error was thrown while trying to run the command - please check the logs.');
+                            }
+                        } else {
+                            message.reply('you are already a member of this event\'s fireteam.');
                         }
                     } else {
-                        message.reply('You are already a member of this event\'s fireteam.');
+                        message.reply('this fireteam is currently full.');
                     }
                 } else {
-                    message.reply('This fireteam is currently full.');
+                    message.reply('could not find an event with the supplied join code.');
                 }
             } else {
-                message.reply('Could not find an event with the supplied join code.');
+                message.reply('please supply an event join code.');
             }
         } else {
-            message.reply('Please supply an event join code.');
+            message.reply('unable to join event - are you registered?')
         }
     }
 
@@ -548,11 +584,10 @@ client.on("message", async message => {
             if (scheduledEvent) {
                 if (scheduledEvent.adminId == message.author.id) {
                     try {
-                        var [rows, fields] = await pool.query(`
-                                START TRANSACTION;
-                                DELETE FROM fireteamMembers WHERE fireteamId = :fireteamId;
-                                DELETE FROM schedule WHERE id = :scheduleId;
-                                COMMIT;`, { scheduleId: scheduledEvent.id, fireteamId: scheduledEvent.fireteamId });
+                        var [rows, fields] = await pool.query(`START TRANSACTION;
+                            DELETE FROM fireteamMembers WHERE fireteamId = :fireteamId;
+                            DELETE FROM schedule WHERE id = :scheduleId;
+                            COMMIT;`, { scheduleId: scheduledEvent.id, fireteamId: scheduledEvent.fireteamId });
                         console.log(rows);
                         message.reply(`cancelled ${scheduledEvent.joinCode}.`);
                         getSchedule().then(createTimers);
@@ -572,11 +607,71 @@ client.on("message", async message => {
     }
 
 
+    if (command === "finish") {
+        if (args[0]) {
+            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+
+            if (scheduledEvent) {
+                if (scheduledEvent.adminId == message.author.id) {
+                    if (scheduledEvent.startTime < moment.utc().format('YYYY-MM-DD HH:mm')) {
+                        try {
+                            var [rows, fields] = await pool.query(`UPDATE schedule SET finishTime = :finishTime WHERE joinCode = :joinCode`,
+                                { finishTime: moment.utc().format('YYYY-MM-DD HH:mm'), joinCode: args[0] });
+                            console.log(rows);
+                            message.reply(`Marked ${args[0]} as completed with a length of ${moment.duration(scheduledEvent.startTime.diff(moment.utc())).format('HH:mm')}`);
+                            getSchedule().then(createTimers);
+                        } catch {
+                            console.log(err);
+                            message.reply('An error was thrown while trying to run the command - please check the logs.');
+                        }
+                    } else {
+                        message.reply('You cannot finish an event that has not started.');
+                    }
+                } else {
+                    message.reply(`Only admins can complete events - please notify ${client.users.get(scheduledEvent.adminId).tag} to complete this event.`);
+                }
+            } else {
+                message.reply('Could not find an event with the supplied join code.');
+            }
+        } else {
+            message.reply('Please supply an event join code.');
+        }
+    }
+
+
+    if (command === "report") {
+        if (args[0]) {
+            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+
+            if (scheduledEvent) {
+                if (scheduledEvent.adminId == message.author.id) {
+                    try {
+                        var [rows, fields] = await pool.query(`UPDATE schedule SET raidReportUrl = :rr WHERE joinCode = :joinCode`,
+                            { rr: args[1], joinCode: args[0] });
+                        console.log(rows);
+                        message.reply(`Set the Raid Report link for this event to <${args[1]}>`);
+                        getSchedule().then(createTimers);
+                    } catch {
+                        console.log(err);
+                        message.reply('An error was thrown while trying to run the command - please check the logs.');
+                    }
+                } else {
+                    message.reply(`Only admins can complete events - please notify ${client.users.get(scheduledEvent.adminId).tag} to complete this event.`);
+                }
+            } else {
+                message.reply('Could not find an event with the supplied join code.');
+            }
+        } else {
+            message.reply('Please supply an event join code.');
+        }
+    }
+
+
     if (command === "next") {
         let creator = registeredUsers.find(o => o.discordId == message.author.id);
         let messageString = "";
         schedule.forEach((scheduleLine, index) => {
-            messageString += `${scheduleLine.name} - ${(scheduleLine.startTime ? `${moment(scheduleLine.startTime).tz(creator.timezoneLocale).format('YYYY-MM-DD HH:mm')} (${moment.tz(creator.timezoneLocale).format('Z')})` : 'Not Set')} \n!join ${scheduleLine.joinCode} | Length: ${scheduleLine.avgLength} | Power: ${scheduleLine.minPower} | Members: ${scheduleLine.fireteamCount}/6\n\n`;
+            messageString += `${scheduleLine.name} - ${(scheduleLine.startTime ? `${moment(scheduleLine.startTime).tz(creator.timezoneLocale).format('YYYY-MM-DD HH:mm')} (${moment.tz(creator.timezoneLocale).format('Z')})` : 'Not Set')} \n!join ${scheduleLine.joinCode} | Length: ${scheduleLine.avgLength} | Power: ${scheduleLine.minPower} | Members: ${scheduleLine.fireteamCount} /6\n\n`;
         });
 
         message.channel.send((messageString ? `\`\`\`${messageString.trim()}\`\`\`` : "No events scheduled."));
