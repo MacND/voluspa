@@ -13,39 +13,84 @@ const pool = mysql.createPool({
 }).promise();
 
 module.exports = {
-    getUsers: async function () {
+    getUsers: async () => {
         try {
-            var [rows, fields] = await pool.query('SELECT * FROM users;');
+            let [rows, fields] = await pool.query('SELECT * FROM users;');
             return rows;
         } catch (err) {
-            throw new Error(err)
+            throw new Error(err);
         }
     },
 
-    getActivities: async function () {
+    getActivities: async () => {
         try {
-            var [rows, fields] = await pool.query('SELECT * FROM activities;');
+            let [rows, fields] = await pool.query('SELECT * FROM activities;');
             return rows;
         } catch (err) {
-            throw new Error(err)
+            throw new Error(err);
         }
     },
 
-    getEvents: async function () {
+    getEvents: async () => {
         try {
-            var [rows, fields] = await pool.query('SELECT * FROM scheduleView WHERE finishTime IS NULL;');
+            let [rows, fields] = await pool.query('SELECT * FROM vSchedule WHERE finishTime IS NULL;');
             return rows;
         } catch (err) {
-            throw new Error(err)
+            throw new Error(err);
         }
     },
 
-    getFireteams: async function () {
+    getFireteams: async () => {
         try {
-            var [rows, fields] = await pool.query('SELECT fireteamId, GROUP_CONCAT(guardianId) AS guardians FROM fireteamMembers GROUP BY fireteamId;');
+            let [rows, fields] = await pool.query('SELECT fireteamId, GROUP_CONCAT(guardianId) AS guardians FROM fireteamMembers GROUP BY fireteamId;');
             return rows;
         } catch (err) {
-            throw new Error(err)
+            throw new Error(err);
+        }
+    },
+
+    putUser: async (discordId, bnetId, timezone) => {
+        try {
+            let [rows, fields] = await pool.query('INSERT INTO users (discordId, bnetId, timezone) VALUES (:discordId, :bnetId, :timezone);', 
+                {   discordId: discordId, 
+                    bnetId: bnetId, 
+                    timezone: timezone 
+                });
+            return rows;
+        } catch (err) {
+            throw new Error(err);
+        }
+    },
+
+    putFireteam: async (discordId, fireteamId) => {
+        try {
+            let [rows, fields] = await pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);',
+                {   guardianId: discordId, 
+                    fireteamId: fireteamId 
+                });
+            return rows;
+        } catch (err) {
+            throw new Error(err);
+        }
+    },
+
+    putEvent: async (shortCode, adminId, openedTime) => {
+        try {
+            let [rows, fields] = await pool.query(`
+                START TRANSACTION; 
+                INSERT INTO events (eventShortCode, adminId, openedTime) VALUES (:shortCode, :adminId, :openedTime);
+                SELECT @eventId:=LAST_INSERT_ID();
+                SELECT @activityCount:=(SELECT COUNT(eventShortCode) FROM events WHERE eventShortCode = :shortCode);
+                INSERT INTO fireteamMembers(guardianId, fireteamId) VALUES(:adminId, @eventId);
+                UPDATE events SET joinCode = CONCAT(eventShortCode, '-', @activityCount), fireteamId = @eventId WHERE id = @eventId;
+                COMMIT;`,
+                {   shortCode: shortCode, 
+                    adminId: adminId,
+                    openedTime: openedTime 
+                });
+            return rows;
+        } catch (err) {
+            throw new Error(err);
         }
     }
 };
