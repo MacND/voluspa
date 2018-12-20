@@ -1,70 +1,28 @@
-// Require declarations
+// Require modules
 const Discord = require("discord.js");
-const config = require("./config.json");
-const { google } = require('googleapis');
-const mysql = require('mysql2');
-const key = require('./googleApiKey.json');
-const AvailabilitySchedule = require('availability-schedule');
+const google = require('./google/google.js');
+const db = require('./db/db.js');
 const moment = require('moment-timezone');
+const momentDurationFormatSetup = require("moment-duration-format");
+momentDurationFormatSetup(moment);
+typeof moment.duration.fn.format === "function";
+typeof moment.duration.format === "function";
 moment.locale('en-gb');
+
+// Require files
+const config = require("./config.json");
+
 
 // Client declarations
 const client = new Discord.Client({ disableEveryone: true });
-const drive = google.drive('v3');
-const sheets = google.sheets('v4');
-const pool = mysql.createPool({
-    host: config.dbhost,
-    user: config.dbuser,
-    password: config.dbpass,
-    database: config.dbname,
-    waitForConnections: true,
-    connectionLimit: 10,
-    multipleStatements: true,
-    namedPlaceholders: true
-}).promise();
 
-const jwtClient = new google.auth.JWT(
-    key.client_email,
-    null,
-    key.private_key,
-    ['https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive']
-);
 
 // Variable declarations
-var events;
-var registeredUsers;
-var schedule;
+let activities,
+    registeredUsers,
+    events;
 
 // Functions
-async function getUsers() {
-    var [rows, fields] = await pool.query('SELECT * FROM users;');
-    registeredUsers = await rows;
-    console.log(registeredUsers);
-}
-
-async function getEvents() {
-    var [rows, fields] = await pool.query('SELECT * FROM events;');
-    events = await rows;
-    console.log(events);
-}
-
-async function getSchedule() {
-    var [rows, fields] = await pool.query('SELECT * FROM scheduleView;');
-    schedule = await rows;
-
-    for (let i = 0; i < schedule.length; i++) {
-        try {
-            var [rows, fields] = await pool.query({ sql: 'SELECT guardianId FROM fireteamMembers WHERE fireteamId = :fireteamId;', rowsAsArray: true }, { fireteamId: schedule[i].fireteamId });
-            schedule[i].fireteamMembers = [].concat.apply([], rows);
-        } catch (err) {
-            console.log(err);
-            message.reply('An error was thrown while trying to run the command - please check the logs.');
-        }
-    }
-    console.log(schedule);
-}
-
 let Timer = {
     map: new Map(),
     set: (key, func, time) => {
@@ -83,20 +41,20 @@ let Timer = {
 }
 
 function createTimers() {
-    for (let i = 0; i < schedule.length; i++) {
-        if (schedule[i].startTime) {
-            let eventStart = moment(schedule[i].startTime);
+    for (let i = 0; i < events.length; i++) {
+        if (events[i].startTime) {
+            let eventStart = moment(events[i].startTime);
             let now = moment();
             let members = "";
-            let activityData = events.find(o => o.shortCode == schedule[i].shortCode);
+            let activityData = activities.find(o => o.shortCode == events[i].shortCode);
             console.log(activityData);
 
-            schedule[i].fireteamMembers.forEach((member, index) => {
+            events[i].fireteamMembers.forEach((member, index) => {
                 members += `${client.users.get(member)} `;
             });
 
-            Timer.set(schedule[i].joinCode, () => {
-                client.channels.get('517651218961530888').send(`Alerting ${members.trim()}\nYou have an event beginning in 15 minutes, at ${moment(schedule[i].startTime).format('MMMM Do HH:mm')} - **${schedule[i].joinCode}** (${activityData.name} ${activityData.eventType}) - Approx. ${activityData.avgLength}`);
+            Timer.set(events[i].joinCode, () => {
+                client.channels.get('517651218961530888').send(`Alerting ${members.trim()}\nYou have an event beginning in 15 minutes, at ${moment(events[i].startTime).format('MMMM Do HH:mm')} - **${events[i].joinCode}** (${activityData.name} ${activityData.eventType}) - Approx. ${activityData.avgLength}`);
             }, moment.duration(eventStart.diff(now)).asMilliseconds() - 900000);
         }
     }
@@ -106,19 +64,11 @@ function createTimers() {
 client.on("ready", async () => {
     console.log(`Successfully connected to Discord`);
     client.user.setActivity(config.status);
-    getUsers();
-    getEvents();
-    getSchedule().then(createTimers);
+    activities = await db.getActivities();
+    registeredUsers = await db.getUsers();
+    events = await db.getEvents();
 });
 
-jwtClient.authorize((err, tokens) => {
-    if (err) {
-        console.log(err);
-        return;
-    } else {
-        console.log("Successfully connected to Google API");
-    }
-});
 
 client.on("message", async message => {
     if (message.author.bot) return;
@@ -132,7 +82,7 @@ client.on("message", async message => {
     const command = args.shift().toLowerCase();
 
     if (command === "info") {
-        message.channel.send(`The Oracle Engine v1.0 - <https://github.com/macnd/the-oracle-engine>`);
+        message.channel.send(`The Oracle Engine - <https://github.com/macnd/the-oracle-engine>`);
     }
 
 
@@ -144,7 +94,7 @@ client.on("message", async message => {
 
     if (command === "eventinfo") {
         if (args[0]) {
-            let event = events.find(o => o.shortCode == args[0].toLowerCase());
+            let event = activities.find(o => o.shortCode == args[0].toLowerCase());
             if (event) {
                 const embed = new Discord.RichEmbed()
                     .setTitle(`${event.name} (${event.eventType})`)
@@ -190,7 +140,7 @@ client.on("message", async message => {
                 let newFileId;
 
                 try {
-                    [rows, fields] = await pool.query('INSERT INTO users (discordId, bnetId, timezoneLocale) VALUES (:discordId, :bnetId, :timezone);', { discordId: discordId, bnetId: args[0], timezone: args[1] });
+                    [rows, fields] = await pool.query('INSERT INTO users (discordId, bnetId, timezone) VALUES (:discordId, :bnetId, :timezone);', { discordId: discordId, bnetId: args[0], timezone: args[1] });
                     console.log(rows);
                     message.channel.send(`${message.author} registered BNet tag ${bnetId} with timezone ${timezone}`);
                 } catch (err) {
@@ -275,9 +225,9 @@ client.on("message", async message => {
 
         if (user) {
             if (moment.tz.zone(args[0])) {
-                if (args[0] !== user.timezoneLocale) {
+                if (args[0] !== user.timezone) {
                     try {
-                        let [rows, fields] = await pool.query('UPDATE users SET timezoneLocale = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] });
+                        let [rows, fields] = await pool.query('UPDATE users SET timezone = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] });
                         let sheetResponse = await sheets.spreadsheets.batchUpdate({
                             auth: jwtClient,
                             spreadsheetId: user.gsheeturl,
@@ -344,7 +294,7 @@ client.on("message", async message => {
         if (!user) {
             message.channel.send(`${client.users.get(searchUserId).tag} is not registered.`);
         } else {
-            message.channel.send(`User information for ${client.users.get(searchUserId).tag}\`\`\`BNet ID: ${user.bnetId}\nTimezone: ${user.timezoneLocale}\`\`\``);
+            message.channel.send(`User information for ${client.users.get(searchUserId).tag}\`\`\`BNet ID: ${user.bnetId}\nTimezone: ${user.timezone}\`\`\``);
         }
     }
 
@@ -360,15 +310,15 @@ client.on("message", async message => {
 
     if (command === "make") {
         if (args[0]) {
-            let event = events.find(o => o.shortCode == args[0].toLowerCase());
+            let event = activities.find(o => o.shortCode == args[0].toLowerCase());
             if (event) {
                 try {
                     var [rows, fields] = await pool.query(`
                         START TRANSACTION; 
-                        INSERT INTO schedule (eventShortCode, adminId) VALUES (:shortCode, :adminId);
-                        SELECT @scheduleId:=LAST_INSERT_ID();
-                        INSERT INTO fireteamMembers(guardianId, fireteamId) VALUES(:adminId, @scheduleId);
-                        UPDATE schedule SET joinCode = CONCAT(eventShortCode, '-', id), fireteamId = @scheduleId WHERE id = @scheduleId;
+                        INSERT INTO events (eventShortCode, adminId) VALUES (:shortCode, :adminId);
+                        SELECT @eventId:=LAST_INSERT_ID();
+                        INSERT INTO fireteamMembers(guardianId, fireteamId) VALUES(:adminId, @eventId);
+                        UPDATE events SET joinCode = CONCAT(eventShortCode, '-', id), fireteamId = @eventId WHERE id = @eventId;
                         COMMIT;`,
                         { shortCode: args[0], adminId: message.author.id });
                     message.reply(`Created event with ID ${args[0]}-${rows[1].insertId}`);
@@ -389,22 +339,22 @@ client.on("message", async message => {
 
     if (command === "schedule") {
         if (args[0]) {
-            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
-            if (scheduledEvent) {
-                if (scheduledEvent.adminId === message.author.id) {
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
+            if (event) {
+                if (event.adminId === message.author.id) {
                     if (args[1] && args[2]) {
                         let creator = registeredUsers.find(o => o.discordId == message.author.id);
 
-                        moment.tz.setDefault(creator.timezoneLocale);
-                        let suggestedDateTime = moment.tz(moment(args[2], 'HH:mm').day(args[1]), creator.timezoneLocale);
+                        moment.tz.setDefault(creator.timezone);
+                        let suggestedDateTime = moment.tz(moment(args[2], 'HH:mm').day(args[1]), creator.timezone);
                         moment.tz.setDefault();
 
-                        if (suggestedDateTime < moment().tz(creator.timezoneLocale)) {
+                        if (suggestedDateTime < moment().tz(creator.timezone)) {
                             suggestedDateTime.add(7, 'd');
                         }
 
                         try {
-                            var [rows, fields] = await pool.query('UPDATE schedule SET startTime = :suggestedTime WHERE joinCode = :joinCode AND adminId = :userId;', { suggestedTime: suggestedDateTime.utc().format('YYYY-MM-DD HH:mm:ss'), joinCode: args[0], userId: message.author.id });
+                            var [rows, fields] = await pool.query('UPDATE events SET startTime = :suggestedTime WHERE joinCode = :joinCode AND adminId = :userId;', { suggestedTime: suggestedDateTime.utc().format('YYYY-MM-DD HH:mm:ss'), joinCode: args[0], userId: message.author.id });
                             console.log(rows);
                             message.reply(`Set start time of ${args[0]} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
                             getSchedule().then(createTimers);
@@ -417,7 +367,7 @@ client.on("message", async message => {
                         message.reply('Invalid date and time supplied.');
                     }
                 } else {
-                    message.reply(`You are not the admin of this event - the admin is ${client.users.get(scheduledEvent.adminId).tag}.`);
+                    message.reply(`You are not the admin of this event - the admin is ${client.users.get(event.adminId).tag}.`);
                 }
             } else {
                 message.reply('Could not find an event with the supplied join code.');
@@ -430,11 +380,11 @@ client.on("message", async message => {
 
     if (command === "members") {
         if (args[0]) {
-            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
-            if (scheduledEvent) {
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
+            if (event) {
                 let messageString = "";
-                scheduledEvent.fireteamMembers.forEach((member, index) => {
-                    messageString += `${client.users.get(member).tag}${(member == scheduledEvent.adminId ? " (Admin)" : "")}\n`;
+                event.fireteamMembers.forEach((member, index) => {
+                    messageString += `${client.users.get(member).tag}${(member == event.adminId ? " (Admin)" : "")}\n`;
                 });
                 message.channel.send(`Fireteam for ${args[0]}\n\`\`\`${messageString}\`\`\``);
             }
@@ -444,17 +394,17 @@ client.on("message", async message => {
 
     if (command === "join") {
         if (args[0]) {
-            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
             let user = registeredUsers.find(o => o.discordId == message.author.id);
-            console.log(scheduledEvent);
+            console.log(event);
             if (user) {
-                if (scheduledEvent) {
-                    if (scheduledEvent.fireteamCount < 6) {
-                        if (scheduledEvent.fireteamMembers.indexOf(message.author.id) <= -1) {
+                if (event) {
+                    if (event.fireteam.split(',').length < 6) {
+                        if (event.fireteamMembers.indexOf(message.author.id) <= -1) {
                             try {
-                                var [rows, fields] = await pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);', { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId });
+                                var [rows, fields] = await pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);', { guardianId: message.author.id, fireteamId: event.fireteamId });
                                 console.log(rows);
-                                message.reply(`you have joined ${scheduledEvent.joinCode}`);
+                                message.reply(`you have joined ${event.joinCode}`);
                                 getSchedule().then(createTimers);
                             } catch (err) {
                                 console.log(err);
@@ -480,13 +430,13 @@ client.on("message", async message => {
 
     if (command === "leave") {
         if (args[0]) {
-            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
-            if (scheduledEvent) {
-                if (scheduledEvent.adminId != message.author.id) {
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
+            if (event) {
+                if (event.adminId != message.author.id) {
                     try {
-                        var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;', { guardianId: message.author.id, fireteamId: scheduledEvent.fireteamId });
+                        var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;', { guardianId: message.author.id, fireteamId: event.fireteamId });
                         console.log(rows);
-                        message.reply(`left ${scheduledEvent.joinCode}`);
+                        message.reply(`left ${event.joinCode}`);
                         getSchedule().then(createTimers);
                     } catch (err) {
                         console.log(err);
@@ -507,17 +457,17 @@ client.on("message", async message => {
     if (command === "kick") {
         if (args[0]) {
             if (args[1]) {
-                let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+                let event = events.find(o => o.joinCode == args[0].toLowerCase());
                 let userToKick = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
 
-                if (scheduledEvent) {
-                    if (scheduledEvent.adminId == message.author.id) {
+                if (event) {
+                    if (event.adminId == message.author.id) {
                         if (userToKick != message.author.id) {
-                            if (scheduledEvent.fireteamMembers.indexOf(userToKick) > -1) {
+                            if (event.fireteamMembers.indexOf(userToKick) > -1) {
                                 try {
-                                    var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;', { guardianId: userToKick, fireteamId: scheduledEvent.fireteamId });
+                                    var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;', { guardianId: userToKick, fireteamId: event.fireteamId });
                                     console.log(rows);
-                                    message.reply(`kicked ${client.users.get(userToKick).tag} from ${scheduledEvent.joinCode}.`);
+                                    message.reply(`kicked ${client.users.get(userToKick).tag} from ${event.joinCode}.`);
                                     getSchedule().then(createTimers);
                                 } catch (err) {
                                     console.log(err);
@@ -530,7 +480,7 @@ client.on("message", async message => {
                             message.reply('You cannot kick yourself from an event.');
                         }
                     } else {
-                        message.reply(`Only admins can kick people from events - please notify ${client.users.get(scheduledEvent.adminId).tag} if you require someone to be kicked.`);
+                        message.reply(`Only admins can kick people from events - please notify ${client.users.get(event.adminId).tag} if you require someone to be kicked.`);
                     }
                 } else {
                     message.reply('Could not find an event with the supplied join code.');
@@ -547,16 +497,16 @@ client.on("message", async message => {
     if (command === "admin") {
         if (args[0]) {
             if (args[1]) {
-                let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+                let event = events.find(o => o.joinCode == args[0].toLowerCase());
                 let userToMod = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
 
-                if (scheduledEvent) {
-                    if (scheduledEvent.adminId == message.author.id) {
-                        if (scheduledEvent.fireteamMembers.indexOf(userToMod) > -1) {
+                if (event) {
+                    if (event.adminId == message.author.id) {
+                        if (event.fireteamMembers.indexOf(userToMod) > -1) {
                             try {
-                                var [rows, fields] = await pool.query('UPDATE schedule SET adminId = :adminId WHERE joinCode = :joinCode;', { adminId: userToMod, joinCode: scheduledEvent.joinCode });
+                                var [rows, fields] = await pool.query('UPDATE events SET adminId = :adminId WHERE joinCode = :joinCode;', { adminId: userToMod, joinCode: event.joinCode });
                                 console.log(rows);
-                                message.reply(`has made ${client.users.get(userToMod).tag} the admin of ${scheduledEvent.joinCode}.`);
+                                message.reply(`has made ${client.users.get(userToMod).tag} the admin of ${event.joinCode}.`);
                                 getSchedule();
                             } catch {
                                 console.log(err);
@@ -581,24 +531,24 @@ client.on("message", async message => {
 
     if (command === "cancel") {
         if (args[0]) {
-            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
 
-            if (scheduledEvent) {
-                if (scheduledEvent.adminId == message.author.id) {
+            if (event) {
+                if (event.adminId == message.author.id) {
                     try {
                         var [rows, fields] = await pool.query(`START TRANSACTION;
                             DELETE FROM fireteamMembers WHERE fireteamId = :fireteamId;
-                            DELETE FROM schedule WHERE id = :scheduleId;
-                            COMMIT;`, { scheduleId: scheduledEvent.id, fireteamId: scheduledEvent.fireteamId });
+                            DELETE FROM events WHERE id = :eventId;
+                            COMMIT;`, { scheduleId: event.id, fireteamId: event.fireteamId });
                         console.log(rows);
-                        message.reply(`cancelled ${scheduledEvent.joinCode}.`);
+                        message.reply(`cancelled ${event.joinCode}.`);
                         getSchedule().then(createTimers);
                     } catch (err) {
                         console.log(err);
                         message.reply('An error was thrown while trying to run the command - please check the logs.');
                     }
                 } else {
-                    message.reply(`Only admins can cancel events - please notify ${client.users.get(scheduledEvent.adminId).tag} to cancel this event.`);
+                    message.reply(`Only admins can cancel events - please notify ${client.users.get(event.adminId).tag} to cancel this event.`);
                 }
             } else {
                 message.reply('Could not find an event with the supplied join code.');
@@ -611,16 +561,16 @@ client.on("message", async message => {
 
     if (command === "finish") {
         if (args[0]) {
-            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
 
-            if (scheduledEvent) {
-                if (scheduledEvent.adminId == message.author.id) {
-                    if (scheduledEvent.startTime < moment.utc().format('YYYY-MM-DD HH:mm')) {
+            if (event) {
+                if (event.adminId == message.author.id) {
+                    if (moment(event.startTime).utc() < moment.utc()) {
                         try {
-                            var [rows, fields] = await pool.query(`UPDATE schedule SET finishTime = :finishTime WHERE joinCode = :joinCode`,
+                            var [rows, fields, err] = await pool.query(`UPDATE events SET finishTime = :finishTime WHERE joinCode = :joinCode`,
                                 { finishTime: moment.utc().format('YYYY-MM-DD HH:mm'), joinCode: args[0] });
                             console.log(rows);
-                            message.reply(`Marked ${args[0]} as completed with a length of ${moment.duration(scheduledEvent.startTime.diff(moment.utc())).format('HH:mm')}`);
+                            message.reply(`Marked ${args[0]} as completed with a length of ${moment.duration(moment.utc().diff(event.startTime)).format('H [hours,] mm [minutes]')}.`);
                             getSchedule().then(createTimers);
                         } catch {
                             console.log(err);
@@ -628,9 +578,10 @@ client.on("message", async message => {
                         }
                     } else {
                         message.reply('You cannot finish an event that has not started.');
+                        console.log(`${moment(event.startTime).utc().format('YYYY-MM-DD HH:mm')} is after ${moment.utc().format('YYYY-MM-DD HH:mm')}`);
                     }
                 } else {
-                    message.reply(`Only admins can complete events - please notify ${client.users.get(scheduledEvent.adminId).tag} to complete this event.`);
+                    message.reply(`Only admins can complete events - please notify ${client.users.get(event.adminId).tag} to complete this event.`);
                 }
             } else {
                 message.reply('Could not find an event with the supplied join code.');
@@ -643,12 +594,12 @@ client.on("message", async message => {
 
     if (command === "report") {
         if (args[0]) {
-            let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
 
-            if (scheduledEvent) {
-                if (scheduledEvent.adminId == message.author.id) {
+            if (event) {
+                if (event.adminId == message.author.id) {
                     try {
-                        var [rows, fields] = await pool.query(`UPDATE schedule SET raidReportUrl = :rr WHERE joinCode = :joinCode`,
+                        var [rows, fields] = await pool.query(`UPDATE events SET raidReportUrl = :rr WHERE joinCode = :joinCode`,
                             { rr: args[1], joinCode: args[0] });
                         console.log(rows);
                         message.reply(`Set the Raid Report link for this event to <${args[1]}>`);
@@ -658,7 +609,7 @@ client.on("message", async message => {
                         message.reply('An error was thrown while trying to run the command - please check the logs.');
                     }
                 } else {
-                    message.reply(`Only admins can complete events - please notify ${client.users.get(scheduledEvent.adminId).tag} to complete this event.`);
+                    message.reply(`Only admins can complete events - please notify ${client.users.get(event.adminId).tag} to complete this event.`);
                 }
             } else {
                 message.reply('Could not find an event with the supplied join code.');
@@ -672,20 +623,20 @@ client.on("message", async message => {
     if (command === "add") {
         if (args[0]) {
             if (args[1]) {
-                let scheduledEvent = schedule.find(o => o.joinCode == args[0].toLowerCase());
+                let event = events.find(o => o.joinCode == args[0].toLowerCase());
                 let userToAdd = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
 
-                if (scheduledEvent) {
-                    if (scheduledEvent.adminId == message.author.id) {
+                if (event) {
+                    if (event.adminId == message.author.id) {
                         if (userToAdd != message.author.id) {
-                            if (scheduledEvent.fireteamMembers.indexOf(userToAdd) <= -1) {
-                                if (scheduledEvent.fireteamCount < 6) {
+                            if (event.fireteamMembers.indexOf(userToAdd) <= -1) {
+                                if (event.fireteam.split(',').length < 6) {
                                     if (registeredUsers.find(o => o.discordId == userToAdd)) {
                                         try {
                                             var [rows, fields] = await pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);',
-                                                { guardianId: userToAdd, fireteamId: scheduledEvent.fireteamId });
+                                                { guardianId: userToAdd, fireteamId: event.fireteamId });
                                             console.log(rows);
-                                            message.reply(`added ${client.users.get(userToAdd).tag} to ${scheduledEvent.joinCode}.`);
+                                            message.reply(`added ${client.users.get(userToAdd).tag} to ${event.joinCode}.`);
                                             getSchedule().then(createTimers);
                                         } catch (err) {
                                             console.log(err);
@@ -704,7 +655,7 @@ client.on("message", async message => {
                             message.reply('You cannot add yourself to an event.');
                         }
                     } else {
-                        message.reply(`Only admins can add people to events - please notify ${client.users.get(scheduledEvent.adminId).tag} if you require someone to be added.`);
+                        message.reply(`Only admins can add people to events - please notify ${client.users.get(event.adminId).tag} if you require someone to be added.`);
                     }
                 } else {
                     message.reply('Could not find an event with the supplied join code.');
@@ -721,8 +672,8 @@ client.on("message", async message => {
     if (command === "next") {
         let creator = registeredUsers.find(o => o.discordId == message.author.id);
         let messageString = "";
-        schedule.forEach((scheduleLine, index) => {
-            messageString += `${scheduleLine.name} - ${(scheduleLine.startTime ? `${moment(scheduleLine.startTime).tz(creator.timezoneLocale).format('YYYY-MM-DD HH:mm')} (${moment.tz(creator.timezoneLocale).format('Z')})` : 'Not Set')} \n!join ${scheduleLine.joinCode} | Length: ${scheduleLine.avgLength} | Power: ${scheduleLine.minPower} | Members: ${scheduleLine.fireteamCount} /6\n\n`;
+        events.forEach((event, index) => {
+            messageString += `${event.name} - ${(event.startTime ? `${moment(event.startTime).tz(creator.timezone).format('YYYY-MM-DD HH:mm (Z)')}` : 'Not Set')} \n!join ${event.joinCode} | Length: ${event.avgLength} | Power: ${event.minPower} | Members: ${event.fireteam.split(',').length}/6\n\n`;
         });
 
         message.channel.send((messageString ? `\`\`\`${messageString.trim()}\`\`\`` : "No events scheduled."));
@@ -738,6 +689,12 @@ client.on("message", async message => {
     if (command === "invite") {
         message.author.send(`You can invite me to a server you manage by using this link - ${config.invite}`);
         message.react("✅");
+    }
+
+
+    if (command === "dbtest") {
+        let results = await db.putEvent('eater',message.author.id,moment.utc().format('YYYY-MM-DD HH:mm'));
+        console.log(results);
     }
 
 });
