@@ -691,12 +691,6 @@ client.on("message", async message => {
         message.react("✅");
     }
 
-
-    if (command === "dbtest") {
-        let results = await db.putEvent('eater',message.author.id,moment.utc().format('YYYY-MM-DD HH:mm'));
-        console.log(results);
-    }
-
 });
 
 client.login(config.token);
