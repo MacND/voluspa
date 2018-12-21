@@ -13,7 +13,7 @@ const pool = mysql.createPool({
 }).promise();
 
 module.exports = {
-    
+
     // Users table
 
     getUsers: async () => {
@@ -27,10 +27,11 @@ module.exports = {
 
     postUser: async (discordId, bnetId, timezone) => {
         try {
-            let [rows, fields] = await pool.query('INSERT INTO users (discordId, bnetId, timezone) VALUES (:discordId, :bnetId, :timezone);', 
-                {   discordId: discordId, 
-                    bnetId: bnetId, 
-                    timezone: timezone 
+            let [rows, fields] = await pool.query('INSERT INTO users (discordId, bnetId, timezone) VALUES (:discordId, :bnetId, :timezone);',
+                {
+                    discordId: discordId,
+                    bnetId: bnetId,
+                    timezone: timezone
                 });
             return rows;
         } catch (err) {
@@ -40,21 +41,23 @@ module.exports = {
 
     putUserTimezone: async (timezone, discordId) => {
         try {
-            let [rows, fields] = await pool.query('UPDATE users SET timezone = :tz WHERE discordId = :discordId;', 
-                {   discordId: discordId, 
-                    tz: timezone 
+            let [rows, fields] = await pool.query('UPDATE users SET timezone = :tz WHERE discordId = :discordId;',
+                {
+                    discordId: discordId,
+                    tz: timezone
                 });
             return rows;
         } catch (err) {
             throw new Error(err);
-        } 
+        }
     },
 
     putUserBnet: async (bnet, discordId) => {
         try {
-            let [rows,fields] = await pool.query('UPDATE users SET bnetId = :bnet WHERE discordId = :discordId;', 
-                {   discordId: discordId, 
-                    bnet: bnet 
+            let [rows, fields] = await pool.query('UPDATE users SET bnetId = :bnet WHERE discordId = :discordId;',
+                {
+                    discordId: discordId,
+                    bnet: bnet
                 });
             return rows;
         } catch (err) {
@@ -67,7 +70,8 @@ module.exports = {
     getEvent: async (id) => {
         try {
             let [rows, fields] = await pool.query('SELECT * FROM vSchedule WHERE id = :id;',
-                {   id: id
+                {
+                    id: id
                 });
             return rows;
         } catch (err) {
@@ -94,9 +98,10 @@ module.exports = {
                 INSERT INTO fireteamMembers(guardianId, fireteamId) VALUES(:adminId, @eventId);
                 UPDATE events SET joinCode = CONCAT(eventShortCode, '-', @activityCount), fireteamId = @eventId WHERE id = @eventId;
                 COMMIT;`,
-                {   shortCode: shortCode, 
+                {
+                    shortCode: shortCode,
                     adminId: adminId,
-                    openedTime: openedTime 
+                    openedTime: openedTime
                 });
             return rows;
         } catch (err) {
@@ -107,8 +112,9 @@ module.exports = {
     putEventStartTime: async (startTime, joinCode, adminId) => {
         try {
             let [rows, fields] = await pool.query('UPDATE events SET startTime = :startTime WHERE joinCode = :joinCode AND adminId = :adminId;',
-                {   startTime: startTime, 
-                    joinCode: joinCode, 
+                {
+                    startTime: startTime,
+                    joinCode: joinCode,
                     adminId: adminId
                 });
             return rows;
@@ -120,8 +126,9 @@ module.exports = {
     putEventFinishTime: async (joinCode) => {
         try {
             var [rows, fields] = await pool.query(`UPDATE events SET finishTime = :finishTime WHERE joinCode = :joinCode`,
-                {   finishTime: moment.utc().format('YYYY-MM-DD HH:mm'), 
-                    joinCode: joinCode 
+                {
+                    finishTime: moment.utc().format('YYYY-MM-DD HH:mm'),
+                    joinCode: joinCode
                 });
             return rows;
         } catch (err) {
@@ -132,7 +139,8 @@ module.exports = {
     putEventRaidReport: async (joinCode, rrLink) => {
         try {
             var [rows, fields] = await pool.query(`UPDATE events SET raidReportUrl = :rr WHERE joinCode = :joinCode`,
-                {   rr: rrLink, 
+                {
+                    rr: rrLink,
                     joinCode: joinCode
                 });
             return rows;
@@ -140,7 +148,23 @@ module.exports = {
             throw new Error(err);
         }
     },
-    
+
+    deleteEvent: async (joinCode, fireteamId) => {
+        try {
+            var [rows, fields] = await pool.query(`
+                START TRANSACTION;
+                DELETE FROM fireteamMembers WHERE fireteamId = :fireteamId;
+                DELETE FROM events WHERE joinCode = :joinCode;
+                COMMIT;`,
+                {
+                    joinCode: joinCode,
+                    fireteamId: fireteamId
+                });
+        } catch (err) {
+            throw new Error(err);
+        }
+    },
+
     // Activities table 
 
     getActivities: async () => {
@@ -166,8 +190,9 @@ module.exports = {
     putFireteam: async (discordId, fireteamId) => {
         try {
             let [rows, fields] = await pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);',
-                {   guardianId: discordId, 
-                    fireteamId: fireteamId 
+                {
+                    guardianId: discordId,
+                    fireteamId: fireteamId
                 });
             return rows;
         } catch (err) {
@@ -177,10 +202,11 @@ module.exports = {
 
     deleteFireteam: async (discordId, fireteamId) => {
         try {
-            var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;', 
-            {   guardianId: discordId, 
-                fireteamId: fireteamId 
-            });
+            var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
+                {
+                    guardianId: discordId,
+                    fireteamId: fireteamId
+                });
             return rows;
         } catch (err) {
             throw new Error(err);
