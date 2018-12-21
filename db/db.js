@@ -149,16 +149,11 @@ module.exports = {
         }
     },
 
-    deleteEvent: async (joinCode, fireteamId) => {
+    deleteEvent: async (joinCode) => {
         try {
-            var [rows, fields] = await pool.query(`
-                START TRANSACTION;
-                DELETE FROM fireteamMembers WHERE fireteamId = :fireteamId;
-                DELETE FROM events WHERE joinCode = :joinCode;
-                COMMIT;`,
+            var [rows, fields] = await pool.query(`DELETE FROM events WHERE joinCode = :joinCode;`,
                 {
                     joinCode: joinCode,
-                    fireteamId: fireteamId
                 });
         } catch (err) {
             throw new Error(err);
@@ -200,7 +195,19 @@ module.exports = {
         }
     },
 
-    deleteFireteam: async (discordId, fireteamId) => {
+    deleteFireteam: async (fireteamId) => {
+        try {
+            var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE  fireteamId = :fireteamId;',
+                {
+                    fireteamId: fireteamId
+                });
+            return rows;
+        } catch (err) {
+            throw new Error(err);
+        }
+    },
+
+    deleteFireteamMember: async (discordId, fireteamId) => {
         try {
             var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
                 {
@@ -211,5 +218,6 @@ module.exports = {
         } catch (err) {
             throw new Error(err);
         }
-    }
+    },
+
 };
