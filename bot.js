@@ -521,7 +521,8 @@ function initListeners() {
                 if (event) {
                     if (event.adminId == message.author.id) {
                         try {
-                            let res = await db.deleteEvent(event.joinCode, event.fireteamId)
+                            let res = await db.deleteEvent(event.joinCode)
+                                .then(db.deleteFireteam(event.fireteamId))
                                 .then(events = await db.getEvents());
                             message.reply(`Deleted event ${event.joinCode} and its fireteam.`);
                         } catch (err) {
