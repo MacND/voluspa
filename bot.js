@@ -67,9 +67,10 @@ client.on("ready", async () => {
     activities = await db.getActivities();
     registeredUsers = await db.getUsers();
     events = await db.getEvents();
+    initListeners();
 });
 
-
+function initListeners() {
 client.on("message", async message => {
     if (message.author.bot) return;
     if (message.content.indexOf(config.prefix) !== 0) return;
@@ -263,20 +264,13 @@ client.on("message", async message => {
 
     if (command === "bnet" || command === "battlenet") {
         let user = registeredUsers.find(o => o.discordId == message.author.id);
-
+        let bnet = args[0]
         if (user) {
-            if (args[0].includes('#')) {
-                if (args[0] != user.bnetId) {
-                    pool.query('UPDATE users SET bnetId = :bnet WHERE discordId = :discordId;', { discordId: message.author.id, bnet: args[0] }, (err, rows) => {
-                        if (err)
-                            throw (err);
-                        console.log(rows);
-                        message.react("✅");
-                    });
-
-                    getUsers();
+            if (bnet.includes('#')) {
+                if (bnet != user.bnetId) {
+                        db.putUserBnet(bnet, message.author.id).then(registeredUsers = await db.getUsers()).then(message.react("✅"));
                 } else {
-                    message.channel.send(`Your BNet ID is already set to ${args[0]}`);
+                    message.channel.send(`Your BNet ID is already set to ${bnet}`);
                 }
             } else {
                 message.channel.send('Invalid BNet ID supplied');
@@ -313,21 +307,13 @@ client.on("message", async message => {
             let event = activities.find(o => o.shortCode == args[0].toLowerCase());
             if (event) {
                 try {
-                    var [rows, fields] = await pool.query(`
-                        START TRANSACTION; 
-                        INSERT INTO events (eventShortCode, adminId) VALUES (:shortCode, :adminId);
-                        SELECT @eventId:=LAST_INSERT_ID();
-                        INSERT INTO fireteamMembers(guardianId, fireteamId) VALUES(:adminId, @eventId);
-                        UPDATE events SET joinCode = CONCAT(eventShortCode, '-', id), fireteamId = @eventId WHERE id = @eventId;
-                        COMMIT;`,
-                        { shortCode: args[0], adminId: message.author.id });
-                    message.reply(`Created event with ID ${args[0]}-${rows[1].insertId}`);
-                    getSchedule();
+                    res = await db.postEvent(event.shortCode, message.author.id, moment.utc().format('YYYY-MM-DD HH:mm')).then(events = await db.getEvents);
+//                    message.reply(`Created event with ID ${await res[0].shortCode}`);
+                    console.log(res);
                 } catch (err) {
                     console.log(err);
                     message.reply('An error was thrown while trying to run the command - please check the logs.');
                 }
-
             } else {
                 message.channel.send(`Unable to find an event with shortcode ${args[0]}.`);
             }
@@ -691,6 +677,14 @@ client.on("message", async message => {
         message.react("✅");
     }
 
-});
+
+    if (command === "devmake") {
+        let res = await db.postEvent('eater', message.author.id, moment.utc().format('YYYY-MM-DD HH:mm'));
+        let event = await db.getEvent(res[1].insertId);
+        message.reply(`Created event with ID ${event.joinCode}`);
+    }
+
+})
+};
 
 client.login(config.token);
