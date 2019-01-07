@@ -22,19 +22,19 @@ jwtClient.authorize((err, tokens) => {
 
 
 module.exports = {
-    getFiles: async function (fileName) {
+    getFiles: async (fileName) => {
         try {
             let response = await drive.files.list({
                 auth: jwtClient,
                 q: `name = '${fileName}' AND '${config.driveFolderId}' in parents`
             });
-            return response.data;
+            return response;
         } catch (err) {
             throw new Error(err);
         }
     },
 
-    createTimetable: async function (fileName) {
+    createTimetable: async (fileName) => {
         try {
             let response = await drive.files.copy({
                 auth: jwtClient,
@@ -49,14 +49,37 @@ module.exports = {
         }
     },
 
-    shareTiemtable: async function (fileId) {
+    shareTiemtable: async (fileId) => {
         try {
             let response = await drive.permissions.create({
                 auth: jwtClient,
-                fileId: newFileId,
+                fileId: fileId,
                 resource: {
                     'role': 'writer',
                     'type': 'anyone'
+                }
+            });
+            return response.data;
+        } catch (err) {
+            throw new Error(err)
+        }
+    },
+
+    setTimetableTimezone: async (fileId, discordId, timezone) => {
+        try {
+            let response = await sheets.spreadsheets.batchUpdate({
+                auth: jwtClient,
+                spreadsheetId: fileId,
+                resource: {
+                    "requests": [{
+                        "updateSpreadsheetProperties": {
+                            "properties": {
+                                "timeZone": timezone,
+                                "title": discordId
+                            },
+                            "fields": "*"
+                        }
+                    }]
                 }
             });
             return response.data;
