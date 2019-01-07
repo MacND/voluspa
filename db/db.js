@@ -61,7 +61,19 @@ module.exports = {
                 });
             return rows;
         } catch (err) {
+            throw new Error(err);
+        }
+    },
 
+    putUserGsheet: async (discordId, gsheetId) => {
+        try {
+            let [rows, fields] = await pool.query('UPDATE users SET gsheeturl = :gsheetId WHERE discordId = :discordId;',
+                {
+                    discordId: discordId,
+                    gsheetId: gsheetId
+                });
+        } catch (err) {
+            throw new Error(err);
         }
     },
 
@@ -69,7 +81,7 @@ module.exports = {
 
     getEvent: async (id) => {
         try {
-            let [rows, fields] = await pool.query('SELECT * FROM vSchedule WHERE id = :id;',
+            let [rows, fields] = await pool.query('SELECT * FROM events WHERE id = :id;',
                 {
                     id: id
                 });
@@ -81,7 +93,16 @@ module.exports = {
 
     getEvents: async () => {
         try {
-            let [rows, fields] = await pool.query('SELECT * FROM vSchedule WHERE finishTime IS NULL;');
+            let [rows, fields] = await pool.query('SELECT * FROM vSchedule;');
+            return rows;
+        } catch (err) {
+            throw new Error(err);
+        }
+    },
+
+    getHistory: async () => {
+        try {
+            let [rows, fields] = await pool.query('SELECT * FROM vHistory;');
             return rows;
         } catch (err) {
             throw new Error(err);
@@ -123,11 +144,11 @@ module.exports = {
         }
     },
 
-    putEventFinishTime: async (joinCode) => {
+    putEventFinishTime: async (joinCode, finishTime) => {
         try {
             var [rows, fields] = await pool.query(`UPDATE events SET finishTime = :finishTime WHERE joinCode = :joinCode`,
                 {
-                    finishTime: moment.utc().format('YYYY-MM-DD HH:mm'),
+                    finishTime: finishTime,
                     joinCode: joinCode
                 });
             return rows;
@@ -144,6 +165,18 @@ module.exports = {
                     joinCode: joinCode
                 });
             return rows;
+        } catch (err) {
+            throw new Error(err);
+        }
+    },
+
+    putEventAdmin: async (joinCode, adminId) => {
+        try {
+            var [rows, fields] = await pool.query('UPDATE events SET adminId = :adminId WHERE joinCode = :joinCode;',
+                {
+                    joinCode: joinCode,
+                    adminId: adminId
+                });
         } catch (err) {
             throw new Error(err);
         }

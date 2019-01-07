@@ -12,17 +12,16 @@ moment.locale('en-gb');
 // Require files
 const config = require("./config.json");
 
-
 // Client declarations
 const client = new Discord.Client({ disableEveryone: true });
-
 
 // Variable declarations
 let activities,
     registeredUsers,
-    events;
+    events,
+    history;
 
-// Functions
+// Functions and Helpers
 let Timer = {
     map: new Map(),
     set: (key, func, time) => {
@@ -40,22 +39,29 @@ let Timer = {
     }
 }
 
+async function pullEvents() {
+    events = await db.getEvents();
+    createTimers();
+}
+
+async function pullHistory() {
+    history = await db.getHistory();
+    history = history.sort(history.finishTime);
+}
+
 function createTimers() {
     for (let i = 0; i < events.length; i++) {
-        if (events[i].startTime) {
-            let eventStart = moment(events[i].startTime);
-            let now = moment();
-            let members = "";
+        let eventStart = moment(events[i].startTime);
+        if (events[i].startTime && eventStart.isAfter(moment.utc())) {
             let activityData = activities.find(o => o.shortCode == events[i].shortCode);
-            console.log(activityData);
-
-            events[i].fireteamMembers.forEach((member, index) => {
-                members += `${client.users.get(member)} `;
-            });
 
             Timer.set(events[i].joinCode, () => {
-                client.channels.get('517651218961530888').send(`Alerting ${members.trim()}\nYou have an event beginning in 15 minutes, at ${moment(events[i].startTime).format('MMMM Do HH:mm')} - **${events[i].joinCode}** (${activityData.name} ${activityData.eventType}) - Approx. ${activityData.avgLength}`);
-            }, moment.duration(eventStart.diff(now)).asMilliseconds() - 900000);
+                events[i].fireteam.split(',').forEach((member, index) => {
+                    let user = registeredUsers.find(o => o.discordId == member)
+                    client.users.get(member).send(`In 10 minutes you are scheduled to take part in **${events[i].joinCode}** (${activityData.name} ${activityData.eventType}).  In your timezone: ${moment(events[i].startTime).tz(user.timezone).format('MMMM Do [@] HH:mm z')}.  This will take around ${moment.duration(activityData.avgLength, 'seconds').format("h [hours] mm [minutes]")}.`);
+                })
+            }, eventStart.clone().subtract(10, "minutes").toDate());
+            console.log(`Setting timer with name ${events[i].joinCode} set to ping at ${eventStart.clone().subtract(10, "minutes").toDate()}`);
         }
     }
 }
@@ -66,7 +72,8 @@ client.on("ready", async () => {
     client.user.setActivity(config.status);
     activities = await db.getActivities();
     registeredUsers = await db.getUsers();
-    events = await db.getEvents();
+    await pullEvents();
+    await pullHistory();
     initListeners();
 });
 
@@ -88,12 +95,12 @@ function initListeners() {
 
 
         if (command === "die" && message.author.id === '79711200312557568') {
-            message.channel.send("Your light is lost...");
-            client.destroy();
+            message.channel.send("Your light is lost...")
+                .then(client.destroy());
         }
 
 
-        if (command === "eventinfo") {
+        if (command === "raidinfo") {
             if (args[0]) {
                 let event = activities.find(o => o.shortCode == args[0].toLowerCase());
                 if (event) {
@@ -110,7 +117,7 @@ function initListeners() {
                     message.channel.send(`Couldn't find an event with shortcode ${args[0]}`);
                 }
             } else {
-                message.channel.send(`Please supply an event short code.`);
+                message.channel.send(`Available raids: ${activities.map(function(elem){return elem.shortCode}).join(", ")}.`);
             }
         }
 
@@ -121,11 +128,7 @@ function initListeners() {
 
             if (!user) {
                 try {
-                    response = await drive.files.list({
-                        auth: jwtClient,
-                        q: `name = '${message.author.id}' AND '${config.driveFolderId}' in parents`
-                    });
-                    console.log(response.data);
+                    response = await google.getFiles(message.author.id);
                 }
                 catch (err) {
                     console.log('The API returned an error: ' + err);
@@ -136,76 +139,20 @@ function initListeners() {
                     let timezone = args[1];
                     let discordId = message.author.id;
                     let copyResponse, permsResponse;
-                    let copyBody = { 'name': message.author.id };
-                    let createBody = { 'role': 'writer', 'type': 'anyone' };
-                    let newFileId;
 
                     try {
-                        [rows, fields] = await pool.query('INSERT INTO users (discordId, bnetId, timezone) VALUES (:discordId, :bnetId, :timezone);', { discordId: discordId, bnetId: args[0], timezone: args[1] });
-                        console.log(rows);
+                        await db.postUser(discordId, bnetId, timezone);
+                        copyResponse = await google.createTimetable(discordId);
+                        permsResponse = await google.shareTiemtable(copyResponse.id);
+                        message.author.send(`Your schedule spreadsheet has been created and is accessible at https://docs.google.com/spreadsheets/d/${copyResponse.id}.  Please keep this link private, as it is shared by URL with no other security.`);
+                        await db.putUserGsheet(discordId, copyResponse.id);
+                        await google.setTimetableTimezone(copyResponse.id, discordId, timezone)
+                        registeredUsers = await db.getUsers();
                         message.channel.send(`${message.author} registered BNet tag ${bnetId} with timezone ${timezone}`);
                     } catch (err) {
                         console.log(err);
-                        message.reply('An error was thrown while trying to run the command - please check the logs.');
+                        message.reply('an error was thrown while trying to run the command - please check the logs.');
                     }
-
-
-                    try {
-                        copyResponse = await drive.files.copy({
-                            auth: jwtClient,
-                            fileId: config.templateFileId,
-                            resource: copyBody
-                        });
-
-                        newFileId = copyResponse.data.id;
-                        console.log(copyResponse.data);
-
-                        permsResponse = await drive.permissions.create({
-                            auth: jwtClient,
-                            fileId: newFileId,
-                            resource: createBody
-                        });
-
-                        console.log(permsResponse.data);
-                        message.author.send(`Your schedule spreadsheet has been created and is accessible at https://docs.google.com/spreadsheets/d/${newFileId}.  Please keep this link private, as it is shared by URL with no other security.`);
-
-
-                        try {
-                            [rows, fields] = await pool.query('UPDATE users SET gsheeturl = :gsheeturl WHERE discordId = :discordId;', { discordId: discordId, gsheeturl: newFileId });
-                            console.log(rows);
-                            console.log('Updated gsheet URL in database.');
-                        } catch (err) {
-                            console.log(err);
-                            message.reply('An error was thrown while trying to run the command - please check the logs.');
-                        }
-
-                    } catch (err) {
-                        console.log('The API returned an error: ' + err);
-                        message.channel.send(`${message.author} error: there was an error while trying to register.  Please contact an admin.`);
-                    }
-
-                    try {
-                        let sheetResponse = await sheets.spreadsheets.batchUpdate({
-                            auth: jwtClient,
-                            spreadsheetId: newFileId,
-                            resource: {
-                                "requests": [{
-                                    "updateSpreadsheetProperties": {
-                                        "properties": {
-                                            "timeZone": `${timezone}`,
-                                            "title": `${discordId}`
-                                        },
-                                        "fields": "*"
-                                    }
-                                }]
-                            }
-                        });
-                        console.log(sheetResponse.data);
-                    } catch (err) {
-                        console.log('The API returned an error: ' + err);
-                    }
-
-                    getUsers();
 
                 } else {
                     message.channel.send(`${message.author} malformed input - please ensure you are using your full BNet ID (including #) and a valid timezone.`);
@@ -228,25 +175,10 @@ function initListeners() {
                 if (moment.tz.zone(args[0])) {
                     if (args[0] !== user.timezone) {
                         try {
-                            let [rows, fields] = await pool.query('UPDATE users SET timezone = :tz WHERE discordId = :discordId;', { discordId: message.author.id, tz: args[0] });
-                            let sheetResponse = await sheets.spreadsheets.batchUpdate({
-                                auth: jwtClient,
-                                spreadsheetId: user.gsheeturl,
-                                resource: {
-                                    "requests": [{
-                                        "updateSpreadsheetProperties": {
-                                            "properties": {
-                                                "timeZone": `${args[0]}`,
-                                                "title": `${user.discordId}`
-                                            },
-                                            "fields": "*"
-                                        }
-                                    }]
-                                }
-                            });
+                            await db.putUserTimezone(args[0], message.author.id);
+                            await google.setTimetableTimezone(user.gsheeturl, user.discordId, args[0]);
+                            registeredUsers = await db.getUsers();
                             message.react("✅");
-                            console.log(sheetResponse.data);
-                            getUsers();
                         } catch (err) {
                             console.log('ERROR: ' + err);
                         }
@@ -268,8 +200,9 @@ function initListeners() {
             if (user) {
                 if (bnet.includes('#')) {
                     if (bnet != user.bnetId) {
-                        db.putUserBnet(bnet, message.author.id).then(registeredUsers = await db.getUsers())
-                            .then(message.react("✅"));
+                        db.putUserBnet(bnet, message.author.id);
+                        registeredUsers = await db.getUsers();
+                        message.react("✅");
                     } else {
                         message.channel.send(`Your BNet ID is already set to ${bnet}`);
                     }
@@ -297,7 +230,7 @@ function initListeners() {
         if (command === "refresh" && message.author.id === '79711200312557568') {
             activities = await db.getActivities();
             registeredUsers = await db.getUsers();
-            events = await db.getEvents();
+            await pullEvents();
             message.react("✅");
         }
 
@@ -308,9 +241,10 @@ function initListeners() {
                 if (activity) {
                     try {
                         let res = await db.postEvent(activity.shortCode, message.author.id, moment.utc().format('YYYY-MM-DD HH:mm'))
-                            .then(events = await db.getEvents());
+                            .then(await pullEvents());
                         let event = events.find(o => o.id == res[1].insertId);
-                        message.reply(`Created event with ID ${event.joinCode}`);
+                        console.log(res);
+                        message.reply(`created event with ID ${event.joinCode}`);
                     } catch (err) {
                         console.log(err);
                         message.reply('a error was thrown while trying to run the command - please check the logs.');
@@ -341,25 +275,25 @@ function initListeners() {
                             }
 
                             try {
-                                res = await db.putEventStartTime(suggestedDateTime.format('YYYY-MM-DD HH:mm'), event.joinCode, creator.discordId)
-                                    .then(events = await db.getEvents());
-                                message.reply(`Set start time of ${args[0]} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
+                                res = await db.putEventStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.joinCode, creator.discordId)
+                                    .then(await pullEvents());
+                                message.reply(`set start time of ${args[0]} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
                             } catch (err) {
                                 console.log(err);
-                                message.reply('An error was thrown while trying to run the command - please check the logs.');
+                                message.reply('an error was thrown while trying to run the command - please check the logs.');
                             }
 
                         } else {
-                            message.reply('Invalid date and time supplied.');
+                            message.reply('invalid date and time supplied.');
                         }
                     } else {
-                        message.reply(`You are not the admin of this event - the admin is ${client.users.get(event.adminId).tag}.`);
+                        message.reply(`you are not the admin of this event - the admin is ${client.users.get(event.adminId).tag}.`);
                     }
                 } else {
-                    message.reply('Could not find an event with the supplied join code.');
+                    message.reply('could not find an event with the supplied join code.');
                 }
             } else {
-                message.reply('Please supply an event join code.');
+                message.reply('please supply an event join code.');
             }
         }
 
@@ -388,8 +322,8 @@ function initListeners() {
                         if (event.fireteam.split(',').length < 6) {
                             if (event.fireteam.split(',').indexOf(message.author.id) <= -1) {
                                 try {
-                                    let res = db.putFireteam(user.discordId, event.fireteamId)
-                                        .then(events = await db.getEvents())
+                                    await db.putFireteam(user.discordId, event.fireteamId)
+                                        .then(await pullEvents())
                                         .then(message.reply(`you have joined ${event.joinCode}`));
                                 } catch (err) {
                                     console.log(err);
@@ -419,22 +353,21 @@ function initListeners() {
                 if (event) {
                     if (event.adminId != message.author.id) {
                         try {
-                            var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;', { guardianId: message.author.id, fireteamId: event.fireteamId });
-                            console.log(rows);
-                            message.reply(`left ${event.joinCode}`);
-                            getSchedule().then(createTimers);
+                            await deleteFireteamMember(message.author.id, event.fireteamId)
+                                .then(await pullEvents())
+                                .then(message.reply(`left ${event.joinCode}`));
                         } catch (err) {
                             console.log(err);
-                            message.reply('An error was thrown while trying to run the command - please check the logs.');
+                            message.reply('an error was thrown while trying to run the command - please check the logs.');
                         }
                     } else {
-                        message.reply('You are the admin of this event - you must elevate another user with the `!admin` command, and then you can leave.');
+                        message.reply('you are the admin of this event - you must elevate another user with the `!admin` command, and then you can leave.');
                     }
                 } else {
-                    message.reply('Could not find an event with the supplied join code.');
+                    message.reply('could not find an event with the supplied join code.');
                 }
             } else {
-                message.reply('Please supply an event join code.');
+                message.reply('please supply an event join code.');
             }
         }
 
@@ -450,31 +383,30 @@ function initListeners() {
                             if (userToKick != message.author.id) {
                                 if (event.fireteam.split(',').indexOf(userToKick) > -1) {
                                     try {
-                                        var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;', { guardianId: userToKick, fireteamId: event.fireteamId });
-                                        console.log(rows);
-                                        message.reply(`kicked ${client.users.get(userToKick).tag} from ${event.joinCode}.`);
-                                        getSchedule().then(createTimers);
+                                        await deleteFireteamMember(userToKick, event.fireteamId)
+                                            .then(await pullEvents())
+                                            .then(message.reply(`kicked ${client.users.get(userToKick).tag} from ${event.joinCode}.`));
                                     } catch (err) {
                                         console.log(err);
-                                        message.reply('An error was thrown while trying to run the command - please check the logs.');
+                                        message.reply('an error was thrown while trying to run the command - please check the logs.');
                                     }
                                 } else {
-                                    message.reply('The user you are trying to kick is not a member of this event.');
+                                    message.reply('the user you are trying to kick is not a member of this event.');
                                 }
                             } else {
-                                message.reply('You cannot kick yourself from an event.');
+                                message.reply('you cannot kick yourself from an event.');
                             }
                         } else {
-                            message.reply(`Only admins can kick people from events - please notify ${client.users.get(event.adminId).tag} if you require someone to be kicked.`);
+                            message.reply(`only admins can kick people from events - please notify ${client.users.get(event.adminId).tag} if you require someone to be kicked.`);
                         }
                     } else {
-                        message.reply('Could not find an event with the supplied join code.');
+                        message.reply('could not find an event with the supplied join code.');
                     }
                 } else {
-                    message.reply('Please supply a username to kick from the event.');
+                    message.reply('please supply a username to kick from the event.');
                 }
             } else {
-                message.reply('Please supply an event join code.');
+                message.reply('please supply an event join code.');
             }
         }
 
@@ -489,28 +421,27 @@ function initListeners() {
                         if (event.adminId == message.author.id) {
                             if (event.fireteam.split(',').indexOf(userToMod) > -1) {
                                 try {
-                                    var [rows, fields] = await pool.query('UPDATE events SET adminId = :adminId WHERE joinCode = :joinCode;', { adminId: userToMod, joinCode: event.joinCode });
-                                    console.log(rows);
-                                    message.reply(`has made ${client.users.get(userToMod).tag} the admin of ${event.joinCode}.`);
-                                    getSchedule();
+                                    await db.putEventAdmin(event.joinCode, userToMod)
+                                        .then(await pullEvents())
+                                        .then(message.reply(`has made ${client.users.get(userToMod).tag} the admin of ${event.joinCode}.`));
                                 } catch {
                                     console.log(err);
-                                    message.reply('An error was thrown while trying to run the command - please check the logs.');
+                                    message.reply('an error was thrown while trying to run the command - please check the logs.');
                                 }
                             } else {
-                                message.reply('The user you are trying to make an admin is not a member of this event.');
+                                message.reply('the user you are trying to make an admin is not a member of this event.');
                             }
                         } else {
-                            message.reply('You must be the admin of this event to elevate another user.');
+                            message.reply('you must be the admin of this event to elevate another user.');
                         }
                     } else {
-                        message.reply('Could not find an event with the supplied join code.');
+                        message.reply('could not find an event with the supplied join code.');
                     }
                 } else {
-                    message.reply('Please supply a username to give admin rights to.');
+                    message.reply('please supply a username to give admin rights to.');
                 }
             } else {
-                message.reply('Please supply an event join code.');
+                message.reply('please supply an event join code.');
             }
         }
 
@@ -521,22 +452,22 @@ function initListeners() {
                 if (event) {
                     if (event.adminId == message.author.id) {
                         try {
-                            let res = await db.deleteEvent(event.joinCode)
+                            await db.deleteEvent(event.joinCode)
                                 .then(db.deleteFireteam(event.fireteamId))
-                                .then(events = await db.getEvents());
-                            message.reply(`Deleted event ${event.joinCode} and its fireteam.`);
+                                .then(await pullEvents())
+                                .then(message.reply(`deleted event ${event.joinCode} and its fireteam.`));
                         } catch (err) {
                             console.log(err);
-                            message.reply('An error was thrown while trying to run the command - please check the logs.');
+                            message.reply('an error was thrown while trying to run the command - please check the logs.');
                         }
                     } else {
-                        message.reply(`Only admins can cancel events - please notify ${client.users.get(event.adminId).tag} to cancel this event.`);
+                        message.reply(`only admins can cancel events - please notify ${client.users.get(event.adminId).tag} to cancel this event.`);
                     }
                 } else {
-                    message.reply('Could not find an event with the supplied join code.');
+                    message.reply('could not find an event with the supplied join code.');
                 }
             } else {
-                message.reply('Please supply an event join code.');
+                message.reply('please supply an event join code.');
             }
         }
 
@@ -549,27 +480,24 @@ function initListeners() {
                     if (event.adminId == message.author.id) {
                         if (moment(event.startTime).utc() < moment.utc()) {
                             try {
-                                var [rows, fields, err] = await pool.query(`UPDATE events SET finishTime = :finishTime WHERE joinCode = :joinCode`,
-                                    { finishTime: moment.utc().format('YYYY-MM-DD HH:mm'), joinCode: args[0] });
-                                console.log(rows);
-                                message.reply(`Marked ${args[0]} as completed with a length of ${moment.duration(moment.utc().diff(event.startTime)).format('H [hours,] mm [minutes]')}.`);
-                                getSchedule().then(createTimers);
+                                await db.putEventFinishTime(event.joinCode, moment.utc().format('YYYY-MM-DD HH:mm'));
+                                await pullEvents();
+                                message.reply(`marked ${args[0]} as completed with a length of ${moment.duration(moment.utc().diff(event.startTime)).format('H [hours,] mm [minutes]')}.`);
                             } catch {
                                 console.log(err);
-                                message.reply('An error was thrown while trying to run the command - please check the logs.');
+                                message.reply('an error was thrown while trying to run the command - please check the logs.');
                             }
                         } else {
-                            message.reply('You cannot finish an event that has not started.');
-                            console.log(`${moment(event.startTime).utc().format('YYYY-MM-DD HH:mm')} is after ${moment.utc().format('YYYY-MM-DD HH:mm')}`);
+                            message.reply('you cannot finish an event that has not started.');
                         }
                     } else {
-                        message.reply(`Only admins can complete events - please notify ${client.users.get(event.adminId).tag} to complete this event.`);
+                        message.reply(`only admins can complete events - please notify ${client.users.get(event.adminId).tag} to complete this event.`);
                     }
                 } else {
-                    message.reply('Could not find an event with the supplied join code.');
+                    message.reply('could not find an event with the supplied join code.');
                 }
             } else {
-                message.reply('Please supply an event join code.');
+                message.reply('please supply an event join code.');
             }
         }
 
@@ -581,23 +509,21 @@ function initListeners() {
                 if (event) {
                     if (event.adminId == message.author.id) {
                         try {
-                            var [rows, fields] = await pool.query(`UPDATE events SET raidReportUrl = :rr WHERE joinCode = :joinCode`,
-                                { rr: args[1], joinCode: args[0] });
-                            console.log(rows);
-                            message.reply(`Set the Raid Report link for this event to <${args[1]}>`);
-                            getSchedule().then(createTimers);
+                            await db.putEventRaidReport(event.joinCode, args[1]);
+                            await pullEvents();
+                            message.reply(`set the Raid Report link for this event to <${args[1]}>`);
                         } catch {
                             console.log(err);
-                            message.reply('An error was thrown while trying to run the command - please check the logs.');
+                            message.reply('an error was thrown while trying to run the command - please check the logs.');
                         }
                     } else {
-                        message.reply(`Only admins can complete events - please notify ${client.users.get(event.adminId).tag} to complete this event.`);
+                        message.reply(`only admins can complete events - please notify ${client.users.get(event.adminId).tag} to complete this event.`);
                     }
                 } else {
-                    message.reply('Could not find an event with the supplied join code.');
+                    message.reply('could not find an event with the supplied join code.');
                 }
             } else {
-                message.reply('Please supply an event join code.');
+                message.reply('please supply an event join code.');
             }
         }
 
@@ -607,22 +533,28 @@ function initListeners() {
             let messageString = "";
 
             for (let i = 0; i < events.length; i++) {
-                messageString += `${events[i].name} - ${(events[i].startTime ? `${moment(events[i].startTime).tz(creator.timezone).format('YYYY-MM-DD HH:mm (Z)')}` : 'Not Set')} \n!join ${events[i].joinCode} | Length: ${events[i].avgLength} | Power: ${events[i].minPower} | Members: ${events[i].fireteam.split(',').length}/6\n\n`;
+                messageString += `${events[i].name} - ${(events[i].startTime ? `${moment(events[i].startTime).tz(creator.timezone).format('MMMM Do [@] HH:mm (z)')}` : 'Not Set')} \n!join ${events[i].joinCode} | Length: ${events[i].avgLength} | Power: ${events[i].minPower} | Members: ${events[i].fireteam.split(',').length}/6\n\n`;
             }
 
             message.channel.send((messageString ? `\`\`\`${messageString.trim()}\`\`\`` : "No events scheduled."));
         }
 
 
-        if (command === "proud") {
-            let emoji = client.emojis.find(emoji => emoji.name === "MadeShaxxProud");
-            message.react(emoji.id);
+        if (command === "history") {
+            let creator = registeredUsers.find(o => o.discordId == message.author.id);
+            let messageString = "";
+
+            for (let i = 0; i < history.length; i++) {
+                messageString += `${history[i].joinCode} - Started ${moment(history[i].startTime).tz(creator.timezone).format('MMMM Do [@] HH:mm (z)')}\nRaid Report: ${history[i].raidReportUrl}\n\n`;
+            }
+
+            message.channel.send(`\`\`\`${messageString.trim()}\`\`\``);
         }
 
 
-        if (command === "invite") {
-            message.author.send(`You can invite me to a server you manage by using this link - ${config.invite}`);
-            message.react("✅");
+        if (command === "proud") {
+            let emoji = client.emojis.find(emoji => emoji.name === "MadeShaxxProud");
+            message.react(emoji.id);
         }
 
     })
