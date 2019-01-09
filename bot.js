@@ -94,7 +94,7 @@ function initListeners() {
         }
 
 
-        if (command === "die" && message.author.id === '79711200312557568') {
+        if (command === "die" && message.author.id === config.ownerId) {
             message.channel.send("Your light is lost...")
                 .then(client.destroy());
         }
@@ -117,7 +117,7 @@ function initListeners() {
                     message.channel.send(`Couldn't find an event with shortcode ${args[0]}`);
                 }
             } else {
-                message.channel.send(`Available raids: ${activities.map(function(elem){return elem.shortCode}).join(", ")}.`);
+                message.channel.send(`Available raids: ${activities.map(function (elem) { return elem.shortCode }).join(", ")}.`);
             }
         }
 
@@ -227,7 +227,7 @@ function initListeners() {
         }
 
 
-        if (command === "refresh" && message.author.id === '79711200312557568') {
+        if (command === "refresh" && message.author.id === config.ownerId) {
             activities = await db.getActivities();
             registeredUsers = await db.getUsers();
             await pullEvents();
@@ -298,7 +298,7 @@ function initListeners() {
         }
 
 
-        if (command === "members") {
+        if (command === "fireteam") {
             if (args[0]) {
                 let event = events.find(o => o.joinCode == args[0].toLowerCase());
                 if (event) {
@@ -322,9 +322,9 @@ function initListeners() {
                         if (event.fireteam.split(',').length < 6) {
                             if (event.fireteam.split(',').indexOf(message.author.id) <= -1) {
                                 try {
-                                    await db.putFireteam(user.discordId, event.fireteamId)
-                                        .then(await pullEvents())
-                                        .then(message.reply(`you have joined ${event.joinCode}`));
+                                    await db.putFireteam(user.discordId, event.fireteamId);
+                                    await pullEvents();
+                                    message.reply(`you have joined ${event.joinCode}`);
                                 } catch (err) {
                                     console.log(err);
                                     message.reply('an error was thrown while trying to run the command - please check the logs.');
@@ -502,7 +502,7 @@ function initListeners() {
         }
 
 
-        if (command === "report") {
+        if (command === "report" || command === "rr") {
             if (args[0]) {
                 let event = events.find(o => o.joinCode == args[0].toLowerCase());
 
@@ -549,12 +549,6 @@ function initListeners() {
             }
 
             message.channel.send(`\`\`\`${messageString.trim()}\`\`\``);
-        }
-
-
-        if (command === "proud") {
-            let emoji = client.emojis.find(emoji => emoji.name === "MadeShaxxProud");
-            message.react(emoji.id);
         }
 
     })
