@@ -15,10 +15,12 @@
     "request": "^2.81.0"
   },
   "devDependencies": {
-    "jshint-esnext": "^2.7.0-3"
+    "eslint": "^5.12.0"
   },
   "scripts": {
-    "test": "jshint bot.js db/db.js google/google.js"
+    "lint": "eslint bot.js db/db.js google/google.js",
+    "pretest": "npm run lint",
+    "test": "echo \"No tests\""
   },
   "keywords": [],
   "author": "",
