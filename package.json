@@ -14,9 +14,11 @@
     "mysql2": "^1.6.4",
     "request": "^2.81.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "jshint": "^2.9.7"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jshint bot.js db/db.js google/google.js"
   },
   "keywords": [],
   "author": "",

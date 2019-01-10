@@ -533,7 +533,7 @@ function initListeners() {
             let messageString = "";
 
             for (let i = 0; i < events.length; i++) {
-                messageString += `${events[i].name} - ${(events[i].startTime ? `${moment(events[i].startTime).tz(creator.timezone).format('MMMM Do [@] HH:mm (z)')}` : 'Not Set')} \n!join ${events[i].joinCode} | Length: ${events[i].avgLength} | Power: ${events[i].minPower} | Members: ${events[i].fireteam.split(',').length}/6\n\n`;
+                messageString += `${events[i].name} - ${(events[i].startTime ? `${moment(events[i].startTime).tz((creator ? creator.timezone : 'UTC')).format('MMMM Do [@] HH:mm (z)')}` : 'Not Set')} \n!join ${events[i].joinCode} | Length: ${events[i].avgLength} | Power: ${events[i].minPower} | Members: ${events[i].fireteam.split(',').length}/6\n\n`;
             }
 
             message.channel.send((messageString ? `\`\`\`${messageString.trim()}\`\`\`` : "No events scheduled."));
@@ -545,7 +545,7 @@ function initListeners() {
             let messageString = "";
 
             for (let i = 0; i < history.length; i++) {
-                messageString += `${history[i].joinCode} - Started ${moment(history[i].startTime).tz(creator.timezone).format('MMMM Do [@] HH:mm (z)')}\nRaid Report: ${history[i].raidReportUrl}\n\n`;
+                messageString += `${history[i].joinCode} - Started ${moment(history[i].startTime).tz((creator ? creator.timezone : 'UTC')).format('MMMM Do [@] HH:mm (z)')}\nRaid Report: ${history[i].raidReportUrl}\n\n`;
             }
 
             message.channel.send(`\`\`\`${messageString.trim()}\`\`\``);
