@@ -483,7 +483,7 @@ function initListeners() {
                                 await db.putEventFinishTime(event.joinCode, moment.utc().format('YYYY-MM-DD HH:mm'));
                                 await pullEvents();
                                 message.reply(`marked ${args[0]} as completed with a length of ${moment.duration(moment.utc().diff(event.startTime)).format('H [hours,] mm [minutes]')}.`);
-                            } catch {
+                            } catch (err) {
                                 console.log(err);
                                 message.reply('an error was thrown while trying to run the command - please check the logs.');
                             }
@@ -512,7 +512,7 @@ function initListeners() {
                             await db.putEventRaidReport(event.joinCode, args[1]);
                             await pullEvents();
                             message.reply(`set the Raid Report link for this event to <${args[1]}>`);
-                        } catch {
+                        } catch (err) {
                             console.log(err);
                             message.reply('an error was thrown while trying to run the command - please check the logs.');
                         }
