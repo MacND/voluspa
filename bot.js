@@ -421,10 +421,10 @@ function initListeners() {
                         if (event.adminId == message.author.id) {
                             if (event.fireteam.split(',').indexOf(userToMod) > -1) {
                                 try {
-                                    await db.putEventAdmin(event.joinCode, userToMod)
-                                        .then(await pullEvents())
-                                        .then(message.reply(`has made ${client.users.get(userToMod).tag} the admin of ${event.joinCode}.`));
-                                } catch {
+                                    await db.putEventAdmin(event.joinCode, userToMod);
+                                    await pullEvents();
+                                    message.reply(`has made ${client.users.get(userToMod).tag} the admin of ${event.joinCode}.`);
+                                } catch (err) {
                                     console.log(err);
                                     message.reply('an error was thrown while trying to run the command - please check the logs.');
                                 }
