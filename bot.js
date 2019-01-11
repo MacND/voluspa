@@ -325,6 +325,12 @@ function initListeners() {
                                     await db.putFireteam(user.discordId, event.fireteamId);
                                     await pullEvents();
                                     message.reply(`you have joined ${event.joinCode}`);
+
+                                    event = events.find(o => o.joinCode == args[0].toLowerCase());
+                                    if (event.fireteam.split(',').length = 6 && event.startTime) {
+                                        message.channel.send(`${event.fireteam.map(function (elem) { return client.users.get(elem).tag }).join(", ")} - the event ${event.joincode} has been confirmed.`);
+                                    }
+
                                 } catch (err) {
                                     console.log(err);
                                     message.reply('an error was thrown while trying to run the command - please check the logs.');
