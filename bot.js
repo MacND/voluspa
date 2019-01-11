@@ -275,9 +275,16 @@ function initListeners() {
                             }
 
                             try {
-                                res = await db.putEventStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.joinCode, creator.discordId)
-                                    .then(await pullEvents());
+                                res = await db.putEventStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.joinCode, creator.discordId);
+                                await pullEvents();
                                 message.reply(`set start time of ${args[0]} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
+
+                                event = events.find(o => o.joinCode == args[0].toLowerCase());
+
+                                if (event.fireteam.split(',').length == 6 && event.startTime) {
+                                    message.channel.send(`${event.fireteam.split(',').map(function (elem) { return client.users.get(elem) }).join(" ")} - the event ${event.joinCode} has been filled and will start on ${moment(event.startTime).format('HH:mm (z) [on] MMMM Do')}.`);
+                                }
+
                             } catch (err) {
                                 console.log(err);
                                 message.reply('an error was thrown while trying to run the command - please check the logs.');
@@ -327,8 +334,9 @@ function initListeners() {
                                     message.reply(`you have joined ${event.joinCode}`);
 
                                     event = events.find(o => o.joinCode == args[0].toLowerCase());
-                                    if (event.fireteam.split(',').length = 6 && event.startTime) {
-                                        message.channel.send(`${event.fireteam.map(function (elem) { return client.users.get(elem).tag }).join(", ")} - the event ${event.joincode} has been confirmed.`);
+
+                                    if (event.fireteam.split(',').length == 6 && event.startTime) {
+                                        message.channel.send(`${event.fireteam.split(',').map(function (elem) { return client.users.get(elem) }).join(" ")} - the event ${event.joinCode} has been filled and will start on ${moment(event.startTime).format('HH:mm (z) [on] MMMM Do')}.`);
                                     }
 
                                 } catch (err) {
@@ -359,7 +367,7 @@ function initListeners() {
                 if (event) {
                     if (event.adminId != message.author.id) {
                         try {
-                            await deleteFireteamMember(message.author.id, event.fireteamId)
+                            await db.deleteFireteamMember(message.author.id, event.fireteamId)
                                 .then(await pullEvents())
                                 .then(message.reply(`left ${event.joinCode}`));
                         } catch (err) {
@@ -539,7 +547,7 @@ function initListeners() {
             let messageString = "";
 
             for (let i = 0; i < events.length; i++) {
-                messageString += `${events[i].name} - ${(events[i].startTime ? `${moment(events[i].startTime).tz((creator ? creator.timezone : 'UTC')).format('MMMM Do [@] HH:mm (z)')}` : 'Not Set')} \n!join ${events[i].joinCode} | Length: ${events[i].avgLength} | Power: ${events[i].minPower} | Members: ${events[i].fireteam.split(',').length}/6\n\n`;
+                messageString += `${events[i].name} - ${(events[i].startTime ? `${moment(events[i].startTime).tz((creator ? creator.timezone : 'UTC')).format('HH:mm (z) [on] MMMM Do')}` : 'Not Set')} \n!join ${events[i].joinCode} | Length: ${events[i].avgLength} | Power: ${events[i].minPower} | Members: ${events[i].fireteam.split(',').length}/6\n\n`;
             }
 
             message.channel.send((messageString ? `\`\`\`${messageString.trim()}\`\`\`` : "No events scheduled."));
@@ -551,7 +559,7 @@ function initListeners() {
             let messageString = "";
 
             for (let i = 0; i < history.length; i++) {
-                messageString += `${history[i].joinCode} - Started ${moment(history[i].startTime).tz((creator ? creator.timezone : 'UTC')).format('MMMM Do [@] HH:mm (z)')}\nRaid Report: ${history[i].raidReportUrl}\n\n`;
+                messageString += `${history[i].joinCode} - Started ${moment(history[i].startTime).tz((creator ? creator.timezone : 'UTC')).format('HH:mm (z) [on] MMMM Do')}\nRaid Report: ${history[i].raidReportUrl}\n\n`;
             }
 
             message.channel.send(`\`\`\`${messageString.trim()}\`\`\``);
