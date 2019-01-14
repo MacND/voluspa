@@ -79,11 +79,23 @@ module.exports = {
 
     // Events table
 
-    getEvent: async (id) => {
+    getEvent: async (joinCode) => {
         try {
-            let [rows, fields] = await pool.query('SELECT * FROM events WHERE id = :id;',
+            let [rows, fields] = await pool.query('SELECT * FROM events e INNER JOIN activities a ON a.shortCode = e.eventShortCode WHERE joinCode = :joinCode;',
                 {
-                    id: id
+                    joinCode: joinCode
+                });
+            return rows[0];
+        } catch (err) {
+            throw new Error(err);
+        }
+    },
+
+    getFireteam: async (fireteamId) => {
+        try {
+            let [rows, fields] = await pool.query('SELECT guardianId FROM fireteamMembers WHERE fireteamId = :fireteamId;',
+                {
+                    fireteamId: fireteamId
                 });
             return rows;
         } catch (err) {
