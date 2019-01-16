@@ -371,26 +371,30 @@ function initListeners() {
 
 
         if (command === "leave") {
-            if (args[0]) {
-                let event = events.find(o => o.joinCode == args[0].toLowerCase());
-                if (event) {
-                    if (event.adminId != message.author.id) {
-                        try {
-                            await db.deleteFireteamMember(message.author.id, event.fireteamId)
-                                .then(await pullEvents())
-                                .then(message.reply(`left ${event.joinCode}`));
-                        } catch (err) {
-                            console.log(err);
-                            message.reply('an error was thrown while trying to run the command - please check the logs.');
-                        }
-                    } else {
-                        message.reply('you are the admin of this event - you must elevate another user with the `!admin` command, and then you can leave.');
-                    }
-                } else {
-                    message.reply('could not find an event with the supplied join code.');
-                }
-            } else {
+            if (!args[0]) {
                 message.reply('please supply an event join code.');
+                return;
+            }
+
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
+
+            if (!event) {
+                message.reply('could not find an event with the supplied join code.');
+                return;
+            }
+
+            if (event.adminId === message.author.id) {
+                message.reply('you are the admin of this event - you must elevate another user with the `!admin` command, and then you can leave.');
+                return;
+            }
+
+            try {
+                await db.deleteFireteamMember(message.author.id, event.fireteamId);
+                await pullEvents();
+                message.reply(`left ${event.joinCode}`);
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
             }
         }
 
