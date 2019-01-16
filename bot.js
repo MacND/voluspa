@@ -94,9 +94,10 @@ function initListeners() {
         }
 
 
-        if (command === "die" && message.author.id === config.ownerId) {
-            message.channel.send("Your light is lost...")
-                .then(client.destroy());
+        if (command === "die") {
+            if (message.author.id === config.ownerId)
+                message.channel.send("Your light is lost...");
+            client.destroy();
         }
 
 
@@ -310,8 +311,10 @@ function initListeners() {
             if (args[0]) {
                 let event = events.find(o => o.joinCode == args[0].toLowerCase());
                 if (event) {
-                    let messageString = "";
+                    let messageString = "\n";
+                    console.log(event.fireteam);
                     event.fireteam.split(',').forEach((member, index) => {
+                        console.log(member);
                         messageString += `${client.users.get(member).username}${(member == event.adminId ? " (Admin)" : "")}\n`;
                     });
                     message.channel.send(`Fireteam for ${event.joinCode}\n\`\`\`${messageString}\`\`\``);
@@ -321,43 +324,48 @@ function initListeners() {
 
 
         if (command === "join") {
-            if (args[0]) {
-                let event = events.find(o => o.joinCode == args[0].toLowerCase());
-                let user = registeredUsers.find(o => o.discordId == message.author.id);
-                console.log(event);
-                if (user) {
-                    if (event) {
-                        if (event.fireteam.split(',').length < 6) {
-                            if (event.fireteam.split(',').indexOf(message.author.id) <= -1) {
-                                try {
-                                    await db.putFireteam(user.discordId, event.fireteamId);
-                                    await pullEvents();
-                                    message.reply(`you have joined ${event.joinCode}`);
+            if (!args[0]) {
+                message.reply('please supply an event join code.');
+                return;
+            }
 
-                                    event = events.find(o => o.joinCode == args[0].toLowerCase());
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
+            let user = registeredUsers.find(o => o.discordId == message.author.id);
 
-                                    if (event.fireteam.split(',').length == 6 && event.startTime) {
-                                        message.channel.send(`${event.fireteam.split(',').map(function (elem) { return client.users.get(elem) }).join(" ")} - the event ${event.joinCode} has been filled and will start on ${moment(event.startTime).format('MMMM Do [@] HH:mm z')}.`);
-                                    }
+            if (!user) {
+                message.reply('unable to join event - are you registered?');
+                return;
+            }
 
-                                } catch (err) {
-                                    console.log(err);
-                                    message.reply('an error was thrown while trying to run the command - please check the logs.');
-                                }
-                            } else {
-                                message.reply('you are already a member of this event\'s fireteam.');
-                            }
-                        } else {
-                            message.reply('this fireteam is currently full.');
-                        }
-                    } else {
-                        message.reply('could not find an event with the supplied join code.');
-                    }
-                } else {
-                    message.reply('please supply an event join code.');
+            if (!event) {
+                message.reply('could not find an event with the supplied join code.');
+                return;
+            }
+
+            if (event.fireteam.split(',').length >= 6) {
+                message.reply('this fireteam is currently full.');
+                return;
+            }
+
+            if (event.fireteam.split(',').indexOf(message.author.id) != -1) {
+                message.reply('you are already a member of this event\'s fireteam.');
+                return;
+            }
+
+            try {
+                await db.putFireteam(user.discordId, event.fireteamId);
+                await pullEvents();
+                message.reply(`you have joined ${event.joinCode}`);
+
+                event = events.find(o => o.joinCode == args[0].toLowerCase());
+
+                if (event.fireteam.split(',').length == 6 && event.startTime) {
+                    message.channel.send(`${event.fireteam.split(',').map(function (elem) { return client.users.get(elem) }).join(" ")} - the event ${event.joinCode} has been filled and will start on ${moment(event.startTime).format('MMMM Do [@] HH:mm z')}.`);
                 }
-            } else {
-                message.reply('unable to join event - are you registered?')
+
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
             }
         }
 
@@ -578,7 +586,7 @@ function initListeners() {
 
                 if (event) {
                     try {
-                        message.channel.send(`Details for **${event.joinCode}**:\n\t• ${event.name} - <${event.raidReportUrl}>\n\t• Started: ${moment(event.startTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t• Finished: ${moment(event.finishTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t• Fireteam: ${fireteam.map(function (elem) { return client.users.get(elem.guardianId).username }).join(', ')}`);
+                        message.channel.send(`Details for **${event.joinCode}**:\n\t• ${event.name}${event.raidReportUrl ? ` - <${event.raidReportUrl}>` : ``}\n\t• Start${(event.finishTime ? 'ed' : 'ing')}: ${moment(event.startTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t${(event.finishTime ? `• Finished: ${moment(event.finishTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t` : ``)}• Fireteam: ${fireteam.map(function (elem) { return client.users.get(elem.guardianId).username }).join(', ')}`);
                     } catch (err) {
                         console.log(err);
                         message.reply('an error was thrown while trying to run the command - please check the logs.');
