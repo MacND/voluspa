@@ -95,8 +95,10 @@ function initListeners() {
 
 
         if (command === "die") {
-            if (message.author.id === config.ownerId)
-                message.channel.send("Your light is lost...");
+            if (message.author.id !== config.ownerId) {
+                return;
+            }
+            message.channel.send("Your light is lost...");
             client.destroy();
         }
 
