@@ -128,45 +128,49 @@ function initListeners() {
         }
 
 
-        if (command === "register" && args[0] && args[1]) {
-            let user = registeredUsers.find(o => o.discordId == message.author.id),
-                response;
+        if (command === "register") {
+            let user = registeredUsers.find(o => o.discordId == message.author.id);
 
             if (!user) {
-                try {
-                    response = await google.getFiles(message.author.id);
-                }
-                catch (err) {
-                    console.log('The API returned an error: ' + err);
-                }
+                message.reply('you appear to already be registered - do `!userinfo` to view your current details.');
+                return;
+            }
 
-                if ((args[0]).includes('#') && moment.tz.zone(args[1]) && !(response.data.files.length)) {
-                    let bnetId = args[0];
-                    let timezone = args[1];
-                    let discordId = message.author.id;
-                    let copyResponse, permsResponse;
+            if (!args[0] || !args[0].includes('#')) {
+                message.reply(`invalid Battle.Net ID supplied - please ensure you are using your full BNet ID, including the # dsicriminator.`);
+                return;
+            }
 
-                    try {
-                        await db.postUser(discordId, bnetId, timezone);
-                        copyResponse = await google.createTimetable(discordId);
-                        permsResponse = await google.shareTiemtable(copyResponse.id);
-                        message.author.send(`Your schedule spreadsheet has been created and is accessible at https://docs.google.com/spreadsheets/d/${copyResponse.id}.  Please keep this link private, as it is shared by URL with no other security.`);
-                        await db.putUserGsheet(discordId, copyResponse.id);
-                        await google.setTimetableTimezone(copyResponse.id, discordId, timezone)
-                        registeredUsers = await db.getUsers();
-                        message.channel.send(`${message.author} registered BNet tag ${bnetId} with timezone ${timezone}`);
-                    } catch (err) {
-                        console.log(err);
-                        message.reply('an error was thrown while trying to run the command - please check the logs.');
-                    }
+            if (!args[1] || !moment.tz.zone(args[1])) {
+                message.reply(`invalid timezone supplied - for a list of acceptable timezones, do \`!timezone help\`.`);
+                return;
+            }
 
-                } else {
-                    message.channel.send(`${message.author} malformed input - please ensure you are using your full BNet ID (including #) and a valid timezone.`);
-                }
-            } else {
-                message.channel.send(`${message.author} Error: you may already be registered, or you did not specify both your BNet ID and Timezone`);
+            let response = await google.getFiles(message.author.id);
+            let bnetId = args[0];
+            let timezone = args[1];
+            let discordId = message.author.id;
+
+            if (response.data.files.length) {
+                message.reply(`you already have a schedule spreadsheet - registration has not completed, please contact an admin.`);
+                return;
+            }
+
+            try {
+                await db.postUser(discordId, bnetId, timezone);
+                let copyResponse = await google.createTimetable(discordId);
+                await google.shareTiemtable(copyResponse.id);
+                message.author.send(`Your schedule spreadsheet has been created and is accessible at https://docs.google.com/spreadsheets/d/${copyResponse.id}.  Please keep this link private, as it is shared by URL with no other security.`);
+                await db.putUserGsheet(discordId, copyResponse.id);
+                await google.setTimetableTimezone(copyResponse.id, discordId, timezone)
+                registeredUsers = await db.getUsers();
+                message.reply(`you have registered BNet tag ${bnetId} with timezone ${timezone}.`);
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
             }
         }
+
 
 
         if (["tz", "timezone"].contains(command)) {
