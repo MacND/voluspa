@@ -487,29 +487,33 @@ function initListeners() {
 
 
         if (command === "cancel") {
-            if (args[0]) {
-                let event = events.find(o => o.joinCode == args[0].toLowerCase());
-
-                if (event) {
-                    if (event.adminId == message.author.id) {
-                        try {
-                            await db.deleteEvent(event.joinCode)
-                                .then(db.deleteFireteam(event.fireteamId))
-                                .then(await pullEvents())
-                                .then(message.reply(`deleted event ${event.joinCode} and its fireteam.`));
-                        } catch (err) {
-                            console.log(err);
-                            message.reply('an error was thrown while trying to run the command - please check the logs.');
-                        }
-                    } else {
-                        message.reply(`only admins can cancel events - please notify ${client.users.get(event.adminId).username} to cancel this event.`);
-                    }
-                } else {
-                    message.reply('could not find an event with the supplied join code.');
-                }
-            } else {
+            if (!args[0]) {
                 message.reply('please supply an event join code.');
+                return;
             }
+
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
+
+            if (!event) {
+                message.reply('could not find an event with the supplied join code.');
+                return;
+            }
+
+            if (event.adminId == message.author.id) {
+                message.reply(`only admins can cancel events - please notify ${client.users.get(event.adminId).username} to cancel this event.`);
+                return;
+            }
+
+            try {
+                await db.deleteEvent(event.joinCode);
+                await db.deleteFireteam(event.fireteamId);
+                await pullEvents();
+                message.reply(`deleted event ${event.joinCode} and its fireteam.`);
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
+            }
+
         }
 
 
