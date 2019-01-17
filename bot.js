@@ -198,7 +198,7 @@ function initListeners() {
         }
 
 
-        if (command === "bnet" || command === "battlenet") {
+        if (["bnet", "battlenet"].contains(command)) {
             let user = registeredUsers.find(o => o.discordId == message.author.id);
             let bnet = args[0]
 
@@ -575,7 +575,7 @@ function initListeners() {
         }
 
 
-        if (["raidreport", "rr"].includes(command)) {
+        if (["raidreport", "rr"].contains(command)) {
             if (!args[0]) {
                 message.reply('please supply an event join code.');
                 return;
