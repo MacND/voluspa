@@ -436,7 +436,7 @@ function initListeners() {
             }
 
             try {
-                await deleteFireteamMember(userToKick, event.fireteamId);
+                await db.deleteFireteamMember(userToKick, event.fireteamId);
                 await pullEvents();
                 message.reply(`kicked ${client.users.get(userToKick).username} from ${event.joinCode}.`);
             } catch (err) {
