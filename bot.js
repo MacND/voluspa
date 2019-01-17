@@ -104,24 +104,25 @@ function initListeners() {
 
 
         if (command === "raidinfo") {
-            if (args[0]) {
-                let event = activities.find(o => o.shortCode == args[0].toLowerCase());
-                if (event) {
-                    const embed = new Discord.RichEmbed()
-                        .setTitle(`${event.name} (${event.eventType})`)
-                        .setColor(5517157)
-                        .setDescription(`\"*${event.eventTagline}*\"\n${event.eventDescription}\n\`\`\`Short code: ${event.shortCode}\nRecommended power: ${event.minPower}\nAverage length: ${moment().startOf('day').seconds(event.avgLength).format('H:mm')}\n\`\`\``)
-                        .setURL(`${event.wikiLink}`)
-                        .setThumbnail(`https://gamezone.cool/img/${event.shortCode}.png`)
-                        .setFooter(`Gather your Fireteam - !make ${event.shortCode}`)
-
-                    message.channel.send(embed);
-                } else {
-                    message.channel.send(`Couldn't find an event with shortcode ${args[0]}`);
-                }
-            } else {
+            if (!args[0]) {
                 message.channel.send(`Available raids: ${activities.map(function (elem) { return elem.shortCode }).join(", ")}.`);
+                return;
             }
+            let event = activities.find(o => o.shortCode == args[0].toLowerCase());
+            if (!event) {
+                message.channel.send(`Couldn't find an event with shortcode ${args[0]}`);
+                return;
+            }
+
+            let embed = new Discord.RichEmbed()
+                .setTitle(`${event.name} (${event.eventType})`)
+                .setColor(5517157)
+                .setDescription(`*"${event.eventTagline}"*\n${event.eventDescription}\n\`\`\`Short code: ${event.shortCode}\nRecommended power: ${event.minPower}\nAverage length: ${moment().startOf('day').seconds(event.avgLength).format('H:mm')}\n\`\`\``)
+                .setURL(`${event.wikiLink}`)
+                .setThumbnail(`https://gamezone.cool/img/${event.shortCode}.png`)
+                .setFooter(`Gather your Fireteam - !make ${event.shortCode}`)
+
+            message.channel.send(embed);
         }
 
 
