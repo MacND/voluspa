@@ -553,31 +553,34 @@ function initListeners() {
         }
 
 
-        if (command === "raidreport" || command === "rr") {
-            if (args[0]) {
-                let event = await db.getEvent(args[0]);
-                console.log(event);
-
-                if (event) {
-                    if (event.adminId == message.author.id) {
-                        try {
-                            await db.putEventRaidReport(event.joinCode, args[1]);
-                            await pullEvents();
-                            await pullHistory();
-                            message.reply(`set the Raid Report link for this event to <${args[1]}>`);
-                        } catch (err) {
-                            console.log(err);
-                            message.reply('an error was thrown while trying to run the command - please check the logs.');
-                        }
-                    } else {
-                        message.reply(`only admins can complete events - please notify ${client.users.get(event.adminId).username} to complete this event.`);
-                    }
-                } else {
-                    message.reply('could not find an event with the supplied join code.');
-                }
-            } else {
+        if (["raidreport", "rr"].includes(command)) {
+            if (!args[0]) {
                 message.reply('please supply an event join code.');
+                return;
             }
+
+            let event = await db.getEvent(args[0]);
+
+            if (!event) {
+                message.reply('could not find an event with the supplied join code.');
+                return;
+            }
+
+            if (event.adminId !== message.author.id) {
+                message.reply(`only admins can complete events - please notify ${client.users.get(event.adminId).username} to complete this event.`);
+                return;
+            }
+
+            try {
+                await db.putEventRaidReport(event.joinCode, args[1]);
+                await pullEvents();
+                await pullHistory();
+                message.reply(`set the Raid Report link for this event to <${args[1]}>`);
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
+            }
+
         }
 
 
