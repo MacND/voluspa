@@ -201,21 +201,25 @@ function initListeners() {
         if (command === "bnet" || command === "battlenet") {
             let user = registeredUsers.find(o => o.discordId == message.author.id);
             let bnet = args[0]
-            if (user) {
-                if (bnet.includes('#')) {
-                    if (bnet != user.bnetId) {
-                        db.putUserBnet(bnet, message.author.id);
-                        registeredUsers = await db.getUsers();
-                        message.react("✅");
-                    } else {
-                        message.channel.send(`Your BNet ID is already set to ${bnet}`);
-                    }
-                } else {
-                    message.channel.send('Invalid BNet ID supplied');
-                }
-            } else {
+
+            if (!user) {
                 message.channel.send('Unable to find user - have you registered?');
+                return;
             }
+
+            if (!bnet.includes('#')) {
+                message.channel.send('Invalid BNet ID supplied');
+                return;
+            }
+
+            if (bnet === user.bnetId) {
+                message.channel.send(`Your BNet ID is already set to ${bnet}`);
+                return;
+            }
+
+            await db.putUserBnet(bnet, message.author.id);
+            registeredUsers = await db.getUsers();
+            message.react("✅");
         }
 
 
@@ -264,49 +268,54 @@ function initListeners() {
 
 
         if (command === "schedule") {
-            if (args[0]) {
-                let event = events.find(o => o.joinCode == args[0].toLowerCase());
-                if (event) {
-                    if (event.adminId === message.author.id) {
-                        if (args[1] && args[2]) {
-                            let creator = registeredUsers.find(o => o.discordId == message.author.id);
+            let creator = registeredUsers.find(o => o.discordId == message.author.id);
 
-                            moment.tz.setDefault(creator.timezone);
-                            let suggestedDateTime = moment.tz(moment(args[2], 'HH:mm').day(args[1]), creator.timezone);
-                            moment.tz.setDefault();
-
-                            if (suggestedDateTime < moment().tz(creator.timezone)) {
-                                suggestedDateTime.add(7, 'd');
-                            }
-
-                            try {
-                                res = await db.putEventStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.joinCode, creator.discordId);
-                                await pullEvents();
-                                message.reply(`set start time of ${args[0]} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
-
-                                event = events.find(o => o.joinCode == args[0].toLowerCase());
-
-                                if (event.fireteam.split(',').length == 6 && event.startTime) {
-                                    message.channel.send(`${event.fireteam.split(',').map(function (elem) { return client.users.get(elem) }).join(" ")} - the event ${event.joinCode} has been filled and will start on ${moment(event.startTime).format('MMMM Do [@] HH:mm z')}.`);
-                                }
-
-                            } catch (err) {
-                                console.log(err);
-                                message.reply('an error was thrown while trying to run the command - please check the logs.');
-                            }
-
-                        } else {
-                            message.reply('invalid date and time supplied.');
-                        }
-                    } else {
-                        message.reply(`you are not the admin of this event - the admin is ${client.users.get(event.adminId).username}.`);
-                    }
-                } else {
-                    message.reply('could not find an event with the supplied join code.');
-                }
-            } else {
+            if (!args[0]) {
                 message.reply('please supply an event join code.');
+                return;
             }
+
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
+
+            if (!event) {
+                message.reply('could not find an event with the supplied join code.');
+                return;
+            }
+
+            if (event.adminId !== message.author.id) {
+                message.reply(`you are not the admin of this event - the admin is ${client.users.get(event.adminId).username}.`);
+                return;
+            }
+
+            if (!args[1] && !args[2]) {
+                message.reply('invalid date and time supplied.');
+                return;
+            }
+
+            moment.tz.setDefault(creator.timezone);
+            let suggestedDateTime = moment.tz(moment(args[2], 'HH:mm').day(args[1]), creator.timezone);
+            moment.tz.setDefault();
+
+            if (suggestedDateTime < moment().tz(creator.timezone)) {
+                suggestedDateTime.add(7, 'd');
+            }
+
+            try {
+                res = await db.putEventStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.joinCode, creator.discordId);
+                await pullEvents();
+                message.reply(`set start time of ${event.joinCode} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
+
+                event = events.find(o => o.joinCode == args[0].toLowerCase());
+
+                if (event.fireteam.split(',').length === 6 && event.startTime) {
+                    message.channel.send(`${event.fireteam.split(',').map(function (elem) { return client.users.get(elem) }).join(" ")} - the event ${event.joinCode} has been filled and will start on ${moment(event.startTime).format('MMMM Do [@] HH:mm z')}.`);
+                }
+
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
+            }
+
         }
 
 
