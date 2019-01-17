@@ -108,7 +108,9 @@ function initListeners() {
                 message.channel.send(`Available raids: ${activities.map(function (elem) { return elem.shortCode }).join(", ")}.`);
                 return;
             }
+
             let event = activities.find(o => o.shortCode == args[0].toLowerCase());
+
             if (!event) {
                 message.channel.send(`Couldn't find an event with shortcode ${args[0]}`);
                 return;
@@ -167,34 +169,38 @@ function initListeners() {
         }
 
 
-        if (command === "tz" || command === "timezone") {
-            let user = registeredUsers.find(o => o.discordId == message.author.id);
-
+        if (["tz", "timezone"].contains(command)) {
             if (args[0] === 'help') {
                 message.channel.send('You can find the list of acceptable timezones here: <https://github.com/MacND/the-oracle-engine/blob/master/timezones.json>');
                 return;
             }
 
-            if (user) {
-                if (moment.tz.zone(args[0])) {
-                    if (args[0] !== user.timezone) {
-                        try {
-                            await db.putUserTimezone(args[0], message.author.id);
-                            await google.setTimetableTimezone(user.gsheeturl, user.discordId, args[0]);
-                            registeredUsers = await db.getUsers();
-                            message.react("✅");
-                        } catch (err) {
-                            console.log('ERROR: ' + err);
-                        }
-                    } else {
-                        message.channel.send(`Your timezone is already set to ${args[0]}`);
-                    }
-                } else {
-                    message.channel.send('Invalid timezone supplied.');
-                }
-            } else {
-                message.channel.send('Unable to find user - have you registered?');
+            let user = registeredUsers.find(o => o.discordId == message.author.id);
+
+            if (!user) {
+                message.reply('you don\'t appear to be registered - please register first.');
+                return;
             }
+
+            if (!moment.tz.zone(args[0])) {
+                message.channel.send('Invalid timezone supplied.');
+                return;
+            }
+
+            if (args[0] === user.timezone) {
+                message.channel.send(`Your timezone is already set to ${args[0]}`);
+                return;
+            }
+
+            try {
+                await db.putUserTimezone(args[0], message.author.id);
+                await google.setTimetableTimezone(user.gsheeturl, user.discordId, args[0]);
+                registeredUsers = await db.getUsers();
+                message.react("✅");
+            } catch (err) {
+                console.log('ERROR: ' + err);
+            }
+
         }
 
 
@@ -229,9 +235,11 @@ function initListeners() {
 
             if (!user) {
                 message.channel.send(`${client.users.get(searchUserId).username} is not registered.`);
-            } else {
-                message.channel.send(`User information for ${client.users.get(searchUserId).username}:\`\`\`BNet ID: ${user.bnetId}\nTimezone: ${user.timezone}\`\`\``);
+                return;
             }
+
+            message.channel.send(`User information for ${client.users.get(searchUserId).username}:\`\`\`BNet ID: ${user.bnetId}\nTimezone: ${user.timezone}\`\`\``);
+
         }
 
 
@@ -245,24 +253,26 @@ function initListeners() {
 
 
         if (command === "make") {
-            if (args[0]) {
-                let activity = activities.find(o => o.shortCode == args[0].toLowerCase());
-                if (activity) {
-                    try {
-                        let res = await db.postEvent(activity.shortCode, message.author.id, moment.utc().format('YYYY-MM-DD HH:mm'));
-                        await pullEvents();
-                        let event = events.find(o => o.id == res[1].insertId);
-                        console.log(res);
-                        message.reply(`created event with ID ${event.joinCode}`);
-                    } catch (err) {
-                        console.log(err);
-                        message.reply('a error was thrown while trying to run the command - please check the logs.');
-                    }
-                } else {
-                    message.channel.send(`Unable to find an event with shortcode ${args[0]}.`);
-                }
-            } else {
+            if (!args[0]) {
                 message.channel.send(`Please supply an event shortcode.`);
+                return;
+            }
+
+            let activity = activities.find(o => o.shortCode == args[0].toLowerCase());
+
+            if (!activity) {
+                message.channel.send(`Unable to find an event with shortcode ${args[0]}.`);
+                return;
+            }
+
+            try {
+                let res = await db.postEvent(activity.shortCode, message.author.id, moment.utc().format('YYYY-MM-DD HH:mm'));
+                await pullEvents();
+                let event = events.find(o => o.id == res[1].insertId);
+                message.reply(`created event with ID ${event.joinCode}`);
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
             }
         }
 
