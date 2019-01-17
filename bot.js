@@ -178,7 +178,7 @@ function initListeners() {
 
 
 
-        if (["tz", "timezone"].contains(command)) {
+        if (["tz", "timezone"].includes(command)) {
             if (args[0] === 'help') {
                 message.channel.send('You can find the list of acceptable timezones here: <https://github.com/MacND/the-oracle-engine/blob/master/timezones.json>');
                 return;
@@ -213,7 +213,7 @@ function initListeners() {
         }
 
 
-        if (["bnet", "battlenet"].contains(command)) {
+        if (["bnet", "battlenet"].includes(command)) {
             let user = registeredUsers.find(o => o.discordId == message.author.id);
             let bnet = args[0]
 
@@ -594,7 +594,7 @@ function initListeners() {
         }
 
 
-        if (["raidreport", "rr"].contains(command)) {
+        if (["raidreport", "rr"].includes(command)) {
             if (!args[0]) {
                 message.reply('please supply an event join code.');
                 return;
