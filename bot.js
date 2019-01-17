@@ -400,41 +400,48 @@ function initListeners() {
 
 
         if (command === "kick") {
-            if (args[0]) {
-                if (args[1]) {
-                    let event = events.find(o => o.joinCode == args[0].toLowerCase());
-                    let userToKick = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
-
-                    if (event) {
-                        if (event.adminId == message.author.id) {
-                            if (userToKick != message.author.id) {
-                                if (event.fireteam.split(',').indexOf(userToKick) > -1) {
-                                    try {
-                                        await deleteFireteamMember(userToKick, event.fireteamId)
-                                            .then(await pullEvents())
-                                            .then(message.reply(`kicked ${client.users.get(userToKick).username} from ${event.joinCode}.`));
-                                    } catch (err) {
-                                        console.log(err);
-                                        message.reply('an error was thrown while trying to run the command - please check the logs.');
-                                    }
-                                } else {
-                                    message.reply('the user you are trying to kick is not a member of this event.');
-                                }
-                            } else {
-                                message.reply('you cannot kick yourself from an event.');
-                            }
-                        } else {
-                            message.reply(`only admins can kick people from events - please notify ${client.users.get(event.adminId).username} if you require someone to be kicked.`);
-                        }
-                    } else {
-                        message.reply('could not find an event with the supplied join code.');
-                    }
-                } else {
-                    message.reply('please supply a username to kick from the event.');
-                }
-            } else {
+            if (!args[0]) {
                 message.reply('please supply an event join code.');
+                return;
             }
+
+            if (!args[1]) {
+                message.reply('please supply a username to kick from the event.');
+                return;
+            }
+
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
+            let userToKick = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
+
+            if (!event) {
+                message.reply('could not find an event with the supplied join code.');
+                return;
+            }
+
+            if (event.adminId == message.author.id) {
+                message.reply(`only admins can kick people from events - please notify ${client.users.get(event.adminId).username} if you require someone to be kicked.`);
+                return;
+            }
+
+            if (userToKick === message.author.id) {
+                message.reply('you cannot kick yourself from an event.');
+                return;
+            }
+
+            if (event.fireteam.split(',').indexOf(userToKick) > -1) {
+                message.reply('the user you are trying to kick is not a member of this event.');
+                return;
+            }
+
+            try {
+                await deleteFireteamMember(userToKick, event.fireteamId);
+                await pullEvents();
+                message.reply(`kicked ${client.users.get(userToKick).username} from ${event.joinCode}.`);
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
+            }
+
         }
 
 
