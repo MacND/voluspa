@@ -499,7 +499,7 @@ function initListeners() {
                 return;
             }
 
-            if (event.adminId == message.author.id) {
+            if (event.adminId !== message.author.id) {
                 message.reply(`only admins can cancel events - please notify ${client.users.get(event.adminId).username} to cancel this event.`);
                 return;
             }
@@ -518,33 +518,38 @@ function initListeners() {
 
 
         if (command === "finish") {
-            if (args[0]) {
-                let event = events.find(o => o.joinCode == args[0].toLowerCase());
-
-                if (event) {
-                    if (event.adminId == message.author.id) {
-                        if (moment(event.startTime).utc() < moment.utc()) {
-                            try {
-                                await db.putEventFinishTime(event.joinCode, moment.utc().format('YYYY-MM-DD HH:mm'));
-                                await pullEvents();
-                                await pullHistory();
-                                message.reply(`marked ${args[0]} as completed with a length of ${moment.duration(moment.utc().diff(event.startTime)).format('H [hours,] mm [minutes]')}.`);
-                            } catch (err) {
-                                console.log(err);
-                                message.reply('an error was thrown while trying to run the command - please check the logs.');
-                            }
-                        } else {
-                            message.reply('you cannot finish an event that has not started.');
-                        }
-                    } else {
-                        message.reply(`only admins can complete events - please notify ${client.users.get(event.adminId).username} to complete this event.`);
-                    }
-                } else {
-                    message.reply('could not find an event with the supplied join code.');
-                }
-            } else {
+            if (!args[0]) {
                 message.reply('please supply an event join code.');
+                return;
             }
+
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
+
+            if (!event) {
+                message.reply('could not find an event with the supplied join code.');
+                return;
+            }
+
+            if (event.adminId !== message.author.id) {
+                message.reply(`only admins can complete events - please notify ${client.users.get(event.adminId).username} to complete this event.`);
+                return;
+            }
+
+            if (moment(event.startTime).utc() > moment.utc()) {
+                message.reply('you cannot finish an event that has not started.');
+                return;
+            }
+
+            try {
+                await db.putEventFinishTime(event.joinCode, moment.utc().format('YYYY-MM-DD HH:mm'));
+                await pullEvents();
+                await pullHistory();
+                message.reply(`marked ${args[0]} as completed with a length of ${moment.duration(moment.utc().diff(event.startTime)).format('H [hours,] mm [minutes]')}.`);
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
+            }
+
         }
 
 
