@@ -446,38 +446,45 @@ function initListeners() {
 
 
         if (command === "admin") {
-            if (args[0]) {
-                if (args[1]) {
-                    let event = events.find(o => o.joinCode == args[0].toLowerCase());
-                    let userToMod = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
-
-                    if (event) {
-                        if (event.adminId == message.author.id) {
-                            if (event.fireteam.split(',').indexOf(userToMod) > -1) {
-                                try {
-                                    await db.putEventAdmin(event.joinCode, userToMod);
-                                    await pullEvents();
-                                    message.reply(`has made ${client.users.get(userToMod).username} the admin of ${event.joinCode}.`);
-                                } catch (err) {
-                                    console.log(err);
-                                    message.reply('an error was thrown while trying to run the command - please check the logs.');
-                                }
-                            } else {
-                                message.reply('the user you are trying to make an admin is not a member of this event.');
-                            }
-                        } else {
-                            message.reply('you must be the admin of this event to elevate another user.');
-                        }
-                    } else {
-                        message.reply('could not find an event with the supplied join code.');
-                    }
-                } else {
-                    message.reply('please supply a username to give admin rights to.');
-                }
-            } else {
+            if (!args[0]) {
                 message.reply('please supply an event join code.');
+                return;
             }
+
+            if (!args[1]) {
+                message.reply('please supply a username to give admin rights to.');
+                return;
+            }
+
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
+            let userToMod = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
+
+            if (!event) {
+                message.reply('could not find an event with the supplied join code.');
+                return;
+            }
+
+            if (event.adminId !== message.author.id) {
+                message.reply('you must be the admin of this event to elevate another user.');
+                return;
+            }
+
+            if (event.fireteam.split(',').indexOf(userToMod) < 0) {
+                message.reply('the user you are trying to make an admin is not a member of this event.');
+                return;
+            }
+
+            try {
+                await db.putEventAdmin(event.joinCode, userToMod);
+                await pullEvents();
+                message.reply(`has made ${client.users.get(userToMod).username} the admin of ${event.joinCode}.`);
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
+            }
+
         }
+
 
         if (command === "cancel") {
             if (args[0]) {
