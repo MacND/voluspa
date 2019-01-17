@@ -311,19 +311,29 @@ function initListeners() {
 
 
         if (command === "fireteam") {
-            if (args[0]) {
-                let event = events.find(o => o.joinCode == args[0].toLowerCase());
-                if (event) {
-                    let messageString = "\n";
-                    console.log(event.fireteam);
-                    event.fireteam.split(',').forEach((member, index) => {
-                        console.log(member);
-                        messageString += `${client.users.get(member).username}${(member == event.adminId ? " (Admin)" : "")}\n`;
-                    });
-                    message.channel.send(`Fireteam for ${event.joinCode}\n\`\`\`${messageString}\`\`\``);
-                }
+            if (!args[0]) {
+                message.reply('please supply an event join code.');
+                return;
             }
+
+            let event = events.find(o => o.joinCode == args[0].toLowerCase());
+
+            if (!event) {
+                message.reply('could not find an event with the supplied join code.');
+                return;
+            }
+
+            let messageString = "";
+
+            event.fireteam.split(',').forEach((member, index) => {
+                console.log(member);
+                messageString += `${client.users.get(member).username}${(member == event.adminId ? " (Admin)" : "")}\n`;
+            });
+
+            message.channel.send(`Fireteam for ${event.joinCode}\n\`\`\`\n${messageString}\`\`\``);
+
         }
+
 
 
         if (command === "join") {
