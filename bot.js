@@ -52,19 +52,24 @@ async function pullHistory() {
 function createTimers() {
     for (let i = 0; i < events.length; i++) {
         let eventStart = moment(events[i].startTime);
-        if (events[i].startTime && eventStart.isAfter(moment.utc())) {
-            let activityData = activities.find(o => o.shortCode == events[i].shortCode);
 
-            Timer.set(events[i].joinCode, () => {
-                events[i].fireteam.split(',').forEach((member, index) => {
-                    let user = registeredUsers.find(o => o.discordId == member)
-                    client.users.get(member).send(`In 10 minutes you are scheduled to take part in **${events[i].joinCode}** (${activityData.name} ${activityData.eventType}).  In your timezone: ${moment(events[i].startTime).tz(user.timezone).format('MMMM Do [@] HH:mm z')}.  This will take around ${moment.duration(activityData.avgLength, 'seconds').format("h [hours] mm [minutes]")}.`);
-                })
-            }, eventStart.clone().subtract(10, "minutes").toDate());
-            console.log(`Setting timer with name ${events[i].joinCode} set to ping at ${eventStart.clone().subtract(10, "minutes").toDate()}`);
+        if (!events[i].startTime || !eventStart.isAfter(moment.utc())) {
+            return;
         }
+
+        let activityData = activities.find(o => o.shortCode == events[i].shortCode);
+
+        Timer.set(events[i].joinCode, () => {
+            events[i].fireteam.split(',').forEach((member, index) => {
+                let user = registeredUsers.find(o => o.discordId == member)
+                client.users.get(member).send(`In 10 minutes you are scheduled to take part in **${events[i].joinCode}** (${activityData.name} ${activityData.eventType}).  In your timezone: ${moment(events[i].startTime).tz(user.timezone).format('MMMM Do [@] HH:mm z')}.  This will take around ${moment.duration(activityData.avgLength, 'seconds').format("h [hours] mm [minutes]")}.`);
+            })
+        }, eventStart.clone().subtract(10, "minutes").toDate());
+
+        console.log(`Setting timer with name ${events[i].joinCode} set to ping at ${eventStart.clone().subtract(10, "minutes").toDate()}`);
     }
 }
+
 
 
 client.on("ready", async () => {
