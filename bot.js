@@ -124,7 +124,7 @@ function initListeners() {
             let embed = new Discord.RichEmbed()
                 .setTitle(`${event.name} (${event.type})`)
                 .setColor(5517157)
-                .setDescription(`*"${event.tagline}"*\n${event.description}\n\`\`\`Short code: ${event.shortName}\nRecommended power: ${event.recommendedPower}\nAverage length: ${moment().startOf('day').seconds(event.beginnerEstimate).format('H:mm')}\n\`\`\``)
+                .setDescription(`*"${event.tagline}"*\n${event.description}\n\`\`\`Short code: ${event.shortName}\nRecommended power: ${event.recommendedPower}\nBeginner estimate: ${moment().startOf('day').seconds(event.beginnerEstimate).format('H:mm')}\n\`\`\``)
                 .setURL(`${event.wikiUrl}`)
                 .setThumbnail(`https://gamezone.cool/img/${event.shortName}.png`)
                 .setFooter(`Gather your Fireteam - !make ${event.shortName}`)
@@ -290,14 +290,14 @@ function initListeners() {
             let creator = registeredUsers.find(o => o.discordId == message.author.id);
 
             if (!args[0]) {
-                message.reply('please supply an event join code.');
+                message.reply('please supply an event raidID.');
                 return;
             }
 
             let event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (!event) {
-                message.reply('could not find an event with the supplied join code.');
+                message.reply('could not find an event with the supplied raidID.');
                 return;
             }
 
@@ -340,14 +340,14 @@ function initListeners() {
 
         if (command === "fireteam") {
             if (!args[0]) {
-                message.reply('please supply an event join code.');
+                message.reply('please supply an event raidID.');
                 return;
             }
 
             let event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (!event) {
-                message.reply('could not find an event with the supplied join code.');
+                message.reply('could not find an event with the supplied raidID.');
                 return;
             }
 
@@ -366,7 +366,7 @@ function initListeners() {
 
         if (command === "join") {
             if (!args[0]) {
-                message.reply('please supply an event join code.');
+                message.reply('please supply an event raidID.');
                 return;
             }
 
@@ -379,7 +379,7 @@ function initListeners() {
             }
 
             if (!event) {
-                message.reply('could not find an event with the supplied join code.');
+                message.reply('could not find an event with the supplied raidID.');
                 return;
             }
 
@@ -413,14 +413,14 @@ function initListeners() {
 
         if (command === "leave") {
             if (!args[0]) {
-                message.reply('please supply an event join code.');
+                message.reply('please supply an event raidID.');
                 return;
             }
 
             let event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (!event) {
-                message.reply('could not find an event with the supplied join code.');
+                message.reply('could not find an event with the supplied raidID.');
                 return;
             }
 
@@ -442,7 +442,7 @@ function initListeners() {
 
         if (command === "kick") {
             if (!args[0]) {
-                message.reply('please supply an event join code.');
+                message.reply('please supply an event raidID.');
                 return;
             }
 
@@ -455,7 +455,7 @@ function initListeners() {
             let userToKick = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
 
             if (!event) {
-                message.reply('could not find an event with the supplied join code.');
+                message.reply('could not find an event with the supplied raidID.');
                 return;
             }
 
@@ -488,7 +488,7 @@ function initListeners() {
 
         if (command === "admin") {
             if (!args[0]) {
-                message.reply('please supply an event join code.');
+                message.reply('please supply an event raidID.');
                 return;
             }
 
@@ -501,7 +501,7 @@ function initListeners() {
             let userToMod = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
 
             if (!event) {
-                message.reply('could not find an event with the supplied join code.');
+                message.reply('could not find an event with the supplied raidID.');
                 return;
             }
 
@@ -529,14 +529,14 @@ function initListeners() {
 
         if (command === "cancel") {
             if (!args[0]) {
-                message.reply('please supply an event join code.');
+                message.reply('please supply an event raidID.');
                 return;
             }
 
             let event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (!event) {
-                message.reply('could not find an event with the supplied join code.');
+                message.reply('could not find an event with the supplied raidID.');
                 return;
             }
 
@@ -560,14 +560,14 @@ function initListeners() {
 
         if (command === "finish") {
             if (!args[0]) {
-                message.reply('please supply an event join code.');
+                message.reply('please supply an event raidID.');
                 return;
             }
 
             let event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (!event) {
-                message.reply('could not find an event with the supplied join code.');
+                message.reply('could not find an event with the supplied raidID.');
                 return;
             }
 
@@ -596,14 +596,14 @@ function initListeners() {
 
         if (["raidreport", "rr"].includes(command)) {
             if (!args[0]) {
-                message.reply('please supply an event join code.');
+                message.reply('please supply an event raidID.');
                 return;
             }
 
             let event = await db.getEvent(args[0]);
 
             if (!event) {
-                message.reply('could not find an event with the supplied join code.');
+                message.reply('could not find an event with the supplied raidID.');
                 return;
             }
 
@@ -630,7 +630,7 @@ function initListeners() {
             let messageString = "";
 
             for (let i = 0; i < events.length; i++) {
-                messageString += `${events[i].name} - ${(events[i].startTime ? `${moment(events[i].startTime).tz((creator ? creator.timezone : 'UTC')).format('MMMM Do [@] HH:mm z')}` : 'Not Set')} \n!join ${events[i].raidId} | Length: ${events[i].beginnerEstimate} | Power: ${events[i].recommendedPower} | Members: ${events[i].fireteam.split(',').length}/6\n\n`;
+                messageString += `${events[i].name} - ${(events[i].startTime ? `${moment(events[i].startTime).tz((creator ? creator.timezone : 'UTC')).format('MMMM Do [@] HH:mm z')}` : 'Not Set')} \n!join ${events[i].raidId} | Beginner estimate: ${events[i].beginnerEstimate} | Power: ${events[i].recommendedPower} | Members: ${events[i].fireteam.split(',').length}/6\n\n`;
             }
 
             message.channel.send((messageString ? `\`\`\`${messageString.trim()}\`\`\`` : "No events scheduled."));
@@ -650,21 +650,24 @@ function initListeners() {
 
 
         if (command === "details") {
-            if (args[0]) {
-                let requester = registeredUsers.find(o => o.discordId == message.author.id);
-                let event = await db.getEvent(args[0]);
-                let fireteam = await db.getFireteam(event.fireteamId);
-
-                if (event) {
-                    try {
-                        message.channel.send(`Details for **${event.raidId}**:\n\t• ${event.name}${event.raidReportUrl ? ` - <${event.raidReportUrl}>` : ``}\n\t• Start${(event.finishTime ? 'ed' : 'ing')}: ${moment(event.startTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t${(event.finishTime ? `• Finished: ${moment(event.finishTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t` : ``)}• Fireteam: ${fireteam.map(function (elem) { return client.users.get(elem.discordId).username }).join(', ')}`);
-                    } catch (err) {
-                        console.log(err);
-                        message.reply('an error was thrown while trying to run the command - please check the logs.');
-                    }
-                }
-
+            if (!args[0]) {
+                message.reply('please supply a raidID.');
+                return;
             }
+
+            let requester = registeredUsers.find(o => o.discordId == message.author.id);
+            let event = await db.getEvent(args[0]);
+            let fireteam = await db.getFireteam(event.fireteamId);
+
+            if (event) {
+                try {
+                    message.channel.send(`Details for **${event.raidId}**:\n\t• ${event.name}${event.raidReportUrl ? ` - <${event.raidReportUrl}>` : ``}\n\t• Start${(event.finishTime ? 'ed' : 'ing')}: ${moment(event.startTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t${(event.finishTime ? `• Finished: ${moment(event.finishTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t` : ``)}• Fireteam: ${fireteam.map(function (elem) { return client.users.get(elem.discordId).username }).join(', ')}`);
+                } catch (err) {
+                    console.log(err);
+                    message.reply('an error was thrown while trying to run the command - please check the logs.');
+                }
+            }
+
         }
 
     })
