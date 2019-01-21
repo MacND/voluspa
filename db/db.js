@@ -93,7 +93,7 @@ module.exports = {
 
     getFireteam: async (fireteamId) => {
         try {
-            let [rows, fields] = await pool.query('SELECT discordId FROM fireteamMembers WHERE fireteamId = :fireteamId;',
+            let [rows, fields] = await pool.query('SELECT discordId FROM fireteams WHERE fireteamId = :fireteamId;',
                 {
                     fireteamId: fireteamId
                 });
@@ -128,7 +128,7 @@ module.exports = {
                 INSERT INTO events (shortName, adminId, createdTime) VALUES (:shortName, :adminId, :createdTime);
                 SELECT @eventId:=LAST_INSERT_ID();
                 SELECT @activityCount:=(SELECT COUNT(shortName) FROM events WHERE shortName = :shortName);
-                INSERT INTO fireteamMembers(discordId, fireteamId) VALUES(:adminId, @eventId);
+                INSERT INTO fireteams(discordId, fireteamId) VALUES(:adminId, @eventId);
                 UPDATE events SET raidId = CONCAT(shortName, '-', @activityCount), fireteamId = @eventId WHERE id = @eventId;
                 COMMIT;`,
                 {
@@ -220,7 +220,7 @@ module.exports = {
 
     getFireteams: async () => {
         try {
-            let [rows, fields] = await pool.query('SELECT fireteamId, GROUP_CONCAT(discordId) AS guardians FROM fireteamMembers GROUP BY fireteamId;');
+            let [rows, fields] = await pool.query('SELECT fireteamId, GROUP_CONCAT(discordId) AS guardians FROM fireteams GROUP BY fireteamId;');
             return rows;
         } catch (err) {
             throw new Error(err);
@@ -229,7 +229,7 @@ module.exports = {
 
     putFireteam: async (discordId, fireteamId) => {
         try {
-            let [rows, fields] = await pool.query('INSERT INTO fireteamMembers (discordId, fireteamId) VALUES (:discordId, :fireteamId);',
+            let [rows, fields] = await pool.query('INSERT INTO fireteams (discordId, fireteamId) VALUES (:discordId, :fireteamId);',
                 {
                     discordId: discordId,
                     fireteamId: fireteamId
@@ -242,7 +242,7 @@ module.exports = {
 
     deleteFireteam: async (fireteamId) => {
         try {
-            var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE  fireteamId = :fireteamId;',
+            var [rows, fields] = await pool.query('DELETE FROM fireteams WHERE  fireteamId = :fireteamId;',
                 {
                     fireteamId: fireteamId
                 });
@@ -254,7 +254,7 @@ module.exports = {
 
     deleteFireteamMember: async (discordId, fireteamId) => {
         try {
-            var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE discordId = :discordId AND fireteamId = :fireteamId;',
+            var [rows, fields] = await pool.query('DELETE FROM fireteams WHERE discordId = :discordId AND fireteamId = :fireteamId;',
                 {
                     discordId: discordId,
                     fireteamId: fireteamId
