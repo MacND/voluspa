@@ -194,6 +194,18 @@ module.exports = {
         }
     },
 
+    putSherpa: async (raidId, adminId) => {
+        try {
+            var [rows, fields] = await pool.query('UPDATE events SET sherpa = true WHERE raidId = :raidId AND adminId = :adminId;',
+                {
+                    raidId: raidId,
+                    adminId: adminId
+                });
+        } catch (err) {
+            throw new Error(err);
+        }
+    },
+
     deleteEvent: async (raidId) => {
         try {
             var [rows, fields] = await pool.query(`DELETE FROM events WHERE raidId = :raidId;`,
