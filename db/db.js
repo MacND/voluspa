@@ -79,11 +79,11 @@ module.exports = {
 
     // Events table
 
-    getEvent: async (joinCode) => {
+    getEvent: async (raidId) => {
         try {
-            let [rows, fields] = await pool.query('SELECT * FROM events e INNER JOIN activities a ON a.shortCode = e.eventShortCode WHERE joinCode = :joinCode;',
+            let [rows, fields] = await pool.query('SELECT * FROM events e INNER JOIN activities a ON a.shortName = e.shortName WHERE raidId = :raidId;',
                 {
-                    joinCode: joinCode
+                    raidId: raidId
                 });
             return rows[0];
         } catch (err) {
@@ -93,7 +93,7 @@ module.exports = {
 
     getFireteam: async (fireteamId) => {
         try {
-            let [rows, fields] = await pool.query('SELECT guardianId FROM fireteamMembers WHERE fireteamId = :fireteamId;',
+            let [rows, fields] = await pool.query('SELECT discordId FROM fireteamMembers WHERE fireteamId = :fireteamId;',
                 {
                     fireteamId: fireteamId
                 });
@@ -121,20 +121,20 @@ module.exports = {
         }
     },
 
-    postEvent: async (shortCode, adminId, openedTime) => {
+    postEvent: async (shortName, adminId, createdTime) => {
         try {
             let [rows, fields] = await pool.query(`
                 START TRANSACTION; 
-                INSERT INTO events (eventShortCode, adminId, openedTime) VALUES (:shortCode, :adminId, :openedTime);
+                INSERT INTO events (shortName, adminId, createdTime) VALUES (:shortName, :adminId, :createdTime);
                 SELECT @eventId:=LAST_INSERT_ID();
-                SELECT @activityCount:=(SELECT COUNT(eventShortCode) FROM events WHERE eventShortCode = :shortCode);
-                INSERT INTO fireteamMembers(guardianId, fireteamId) VALUES(:adminId, @eventId);
-                UPDATE events SET joinCode = CONCAT(eventShortCode, '-', @activityCount), fireteamId = @eventId WHERE id = @eventId;
+                SELECT @activityCount:=(SELECT COUNT(shortName) FROM events WHERE shortName = :shortName);
+                INSERT INTO fireteamMembers(discordId, fireteamId) VALUES(:adminId, @eventId);
+                UPDATE events SET raidId = CONCAT(shortName, '-', @activityCount), fireteamId = @eventId WHERE id = @eventId;
                 COMMIT;`,
                 {
-                    shortCode: shortCode,
+                    shortName: shortName,
                     adminId: adminId,
-                    openedTime: openedTime
+                    createdTime: createdTime
                 });
             return rows;
         } catch (err) {
@@ -142,12 +142,12 @@ module.exports = {
         }
     },
 
-    putEventStartTime: async (startTime, joinCode, adminId) => {
+    putEventStartTime: async (startTime, raidId, adminId) => {
         try {
-            let [rows, fields] = await pool.query('UPDATE events SET startTime = :startTime WHERE joinCode = :joinCode AND adminId = :adminId;',
+            let [rows, fields] = await pool.query('UPDATE events SET startTime = :startTime WHERE raidId = :raidId AND adminId = :adminId;',
                 {
                     startTime: startTime,
-                    joinCode: joinCode,
+                    raidId: raidId,
                     adminId: adminId
                 });
             return rows;
@@ -156,12 +156,12 @@ module.exports = {
         }
     },
 
-    putEventFinishTime: async (joinCode, finishTime) => {
+    putEventFinishTime: async (raidId, finishTime) => {
         try {
-            var [rows, fields] = await pool.query(`UPDATE events SET finishTime = :finishTime WHERE joinCode = :joinCode`,
+            var [rows, fields] = await pool.query(`UPDATE events SET finishTime = :finishTime WHERE raidId = :raidId`,
                 {
                     finishTime: finishTime,
-                    joinCode: joinCode
+                    raidId: raidId
                 });
             return rows;
         } catch (err) {
@@ -169,12 +169,12 @@ module.exports = {
         }
     },
 
-    putEventRaidReport: async (joinCode, rrLink) => {
+    putEventRaidReport: async (raidId, rrLink) => {
         try {
-            var [rows, fields] = await pool.query(`UPDATE events SET raidReportUrl = :rr WHERE joinCode = :joinCode`,
+            var [rows, fields] = await pool.query(`UPDATE events SET raidReportUrl = :rr WHERE raidId = :raidId`,
                 {
                     rr: rrLink,
-                    joinCode: joinCode
+                    raidId: raidId
                 });
             return rows;
         } catch (err) {
@@ -182,11 +182,11 @@ module.exports = {
         }
     },
 
-    putEventAdmin: async (joinCode, adminId) => {
+    putEventAdmin: async (raidId, adminId) => {
         try {
-            var [rows, fields] = await pool.query('UPDATE events SET adminId = :adminId WHERE joinCode = :joinCode;',
+            var [rows, fields] = await pool.query('UPDATE events SET adminId = :adminId WHERE raidId = :raidId;',
                 {
-                    joinCode: joinCode,
+                    raidId: raidId,
                     adminId: adminId
                 });
         } catch (err) {
@@ -194,11 +194,11 @@ module.exports = {
         }
     },
 
-    deleteEvent: async (joinCode) => {
+    deleteEvent: async (raidId) => {
         try {
-            var [rows, fields] = await pool.query(`DELETE FROM events WHERE joinCode = :joinCode;`,
+            var [rows, fields] = await pool.query(`DELETE FROM events WHERE raidId = :raidId;`,
                 {
-                    joinCode: joinCode,
+                    raidId: raidId,
                 });
         } catch (err) {
             throw new Error(err);
@@ -220,7 +220,7 @@ module.exports = {
 
     getFireteams: async () => {
         try {
-            let [rows, fields] = await pool.query('SELECT fireteamId, GROUP_CONCAT(guardianId) AS guardians FROM fireteamMembers GROUP BY fireteamId;');
+            let [rows, fields] = await pool.query('SELECT fireteamId, GROUP_CONCAT(discordId) AS guardians FROM fireteamMembers GROUP BY fireteamId;');
             return rows;
         } catch (err) {
             throw new Error(err);
@@ -229,9 +229,9 @@ module.exports = {
 
     putFireteam: async (discordId, fireteamId) => {
         try {
-            let [rows, fields] = await pool.query('INSERT INTO fireteamMembers (guardianId, fireteamId) VALUES (:guardianId, :fireteamId);',
+            let [rows, fields] = await pool.query('INSERT INTO fireteamMembers (discordId, fireteamId) VALUES (:discordId, :fireteamId);',
                 {
-                    guardianId: discordId,
+                    discordId: discordId,
                     fireteamId: fireteamId
                 });
             return rows;
@@ -254,9 +254,9 @@ module.exports = {
 
     deleteFireteamMember: async (discordId, fireteamId) => {
         try {
-            var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE guardianId = :guardianId AND fireteamId = :fireteamId;',
+            var [rows, fields] = await pool.query('DELETE FROM fireteamMembers WHERE discordId = :discordId AND fireteamId = :fireteamId;',
                 {
-                    guardianId: discordId,
+                    discordId: discordId,
                     fireteamId: fireteamId
                 });
             return rows;
