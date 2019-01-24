@@ -46,7 +46,26 @@ async function pullEvents() {
 
 async function pullHistory() {
     history = await db.getHistory();
-    history = history.sort(history.finishTime);
+}
+
+async function notifyUsers(event) {
+    for (let i = 0; i < registeredUsers.length; i++) {
+        let user = registeredUsers[i];
+
+        if (!user.newEventNotification) {
+            continue;
+        }
+
+        if (user.discordId === event.adminId) {
+            continue;
+        }
+
+        try {
+            client.users.get(user.discordId).send(`A new event has been created - **${event.raidId}** (${event.name}${(event.sherpa ? ', Sherpa' : '')}).`);
+        } catch (err) {
+            console.log(err);
+        }
+    }
 }
 
 function createTimers() {
@@ -61,7 +80,7 @@ function createTimers() {
 
         Timer.set(events[i].raidId, () => {
             events[i].fireteam.split(',').forEach((member, index) => {
-                let user = registeredUsers.find(o => o.discordId == member)
+                let user = registeredUsers.find(o => o.discordId === member)
                 client.users.get(member).send(`In 10 minutes you are scheduled to take part in **${events[i].raidId}** (${activityData.name} ${activityData.type}).  In your timezone: ${moment(events[i].startTime).tz(user.timezone).format('MMMM Do [@] HH:mm z')}.  This will take around ${moment.duration(activityData.beginnerEstimate, 'seconds').format("h [hours] mm [minutes]")}.`);
             })
         }, eventStart.clone().subtract(10, "minutes").toDate());
@@ -117,7 +136,7 @@ function initListeners() {
             let event = activities.find(o => o.shortName == args[0].toLowerCase());
 
             if (!event) {
-                message.channel.send(`Couldn't find an event with shortcode ${args[0]}`);
+                message.channel.send(`Couldn't find an event with raidId ${args[0]}`);
                 return;
             }
 
@@ -214,7 +233,7 @@ function initListeners() {
 
 
         if (["bnet", "battlenet"].includes(command)) {
-            let user = registeredUsers.find(o => o.discordId == message.author.id);
+            let user = registeredUsers.find(o => o.discordId === message.author.id);
             let bnet = args[0]
 
             if (!user) {
@@ -234,21 +253,110 @@ function initListeners() {
 
             await db.putUserBnet(bnet, message.author.id);
             registeredUsers = await db.getUsers();
-            message.react("✅");
+
+        }
+
+
+        if (command === "twitch") {
+            if (!args[0]) {
+                message.reply('please provide your Twitch username.');
+                return;
+            }
+
+            let twitch = args[0];
+            let user = registeredUsers.find(o => o.discordId == message.author.id);
+
+            if (!user) {
+                message.channel.send('Unable to find user - have you registered?');
+                return;
+            }
+
+            if (twitch.includes(':', '/', '.')) {
+                message.reply('invalid Twitch username supplied - did you provide a link instead?');
+                return;
+            }
+
+            if (twitch === user.twitch) {
+                message.reply(`your Twitch username is already set to ${user.twitch}.`);
+                return;
+            }
+
+            try {
+                await db.putUserTwitch(message.author.id, twitch);
+                registeredUsers = await db.getUsers();
+                message.react("✅");
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
+            }
+
+        }
+
+
+        if (command === "notify") {
+            let notify;
+            let user = registeredUsers.find(o => o.discordId == message.author.id);
+
+            if (!user) {
+                message.channel.send('Unable to find user - have you registered?');
+                return;
+            }
+
+            if (!args[0]) {
+                message.reply(`please provide either 'on' or 'off'.`);
+                return;
+            }
+
+            if (args[0] === 'on') {
+                notify = true;
+            } else if (args[0] === 'off') {
+                notify = false;
+            } else {
+                message.reply(`invalid arguments supplied - provide either 'on' or 'off'.`);
+                return;
+            }
+
+            try {
+                await db.putUserNotification(message.author.id, notify);
+                registeredUsers = await db.getUsers();
+                message.react("✅");
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
+            }
+
         }
 
 
         if (command === "userinfo") {
             let searchUserId = (args[0] ? client.users.find(user => user.username.toLowerCase() === args[0].toLowerCase()).id : message.author.id);
-            let user = registeredUsers.find(o => o.discordId == searchUserId);
+            let user = registeredUsers.find(o => o.discordId === searchUserId);
 
             if (!user) {
                 message.channel.send(`${client.users.get(searchUserId).username} is not registered.`);
                 return;
             }
 
-            message.channel.send(`User information for ${client.users.get(searchUserId).username}:\`\`\`BNet ID: ${user.bnetId}\nTimezone: ${user.timezone}\`\`\``);
+            message.channel.send(`User information for ${client.users.get(searchUserId).username}:\`\`\`BNet ID: ${user.bnetId}\nTimezone: ${user.timezone}\nTwitch: ${(user.twitch ? user.twitch : 'Not set')}\nNotifications: ${(user.newEventNotification ? 'On' : 'Off')}\`\`\``);
 
+        }
+
+
+        if (command === "sheet") {
+            let user = registeredUsers.find(o => o.discordId === message.author.id);
+
+            if (!user) {
+                message.reply('unable to find user - have you registered?');
+                return;
+            }
+
+            try {
+                client.users.get(user.discordId).send(`Your GSheet can be found at https://docs.google.com/spreadsheets/d/${user.gsheeturl}`);
+                message.react("✅");
+            } catch (err) {
+                console.log(err);
+                message.react("⚠️");
+            }
         }
 
 
@@ -263,14 +371,14 @@ function initListeners() {
 
         if (command === "make") {
             if (!args[0]) {
-                message.channel.send(`Please supply an event shortcode.`);
+                message.channel.send(`Please supply an event raidId.`);
                 return;
             }
 
             let activity = activities.find(o => o.shortName == args[0].toLowerCase());
 
             if (!activity) {
-                message.channel.send(`Unable to find an event with shortcode ${args[0]}.`);
+                message.channel.send(`Unable to find an event with raidId ${args[0]}.`);
                 return;
             }
 
@@ -278,6 +386,7 @@ function initListeners() {
                 let res = await db.postEvent(activity.shortName, message.author.id, moment.utc().format('YYYY-MM-DD HH:mm'));
                 await pullEvents();
                 let event = events.find(o => o.id == res[1].insertId);
+                await notifyUsers(event);
                 message.reply(`created event with ID ${event.raidId}`);
             } catch (err) {
                 console.log(err);
@@ -286,18 +395,48 @@ function initListeners() {
         }
 
 
-        if (command === "schedule") {
-            let creator = registeredUsers.find(o => o.discordId == message.author.id);
-
+        if (command === "sherpa") {
             if (!args[0]) {
-                message.reply('please supply an event raidID.');
+                message.reply(`please supply an event raidId.`);
                 return;
             }
 
             let event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (!event) {
-                message.reply('could not find an event with the supplied raidID.');
+                message.reply('could not find an event with the supplied raidId.');
+                return;
+            }
+
+            if (event.adminId !== message.author.id) {
+                message.reply(`you are not the admin of this event - the admin is ${client.users.get(event.adminId).username}.`);
+                return;
+            }
+
+            try {
+                await db.putSherpa(event.raidId, event.adminId);
+                await pullEvents();
+                message.reply(`marked ${event.raidId} as a Sherpa run.`);
+            } catch (err) {
+                console.log(err);
+                message.reply('an error was thrown while trying to run the command - please check the logs.');
+            }
+
+        }
+
+
+        if (command === "schedule") {
+            let creator = registeredUsers.find(o => o.discordId == message.author.id);
+
+            if (!args[0]) {
+                message.reply('please supply an event raidId.');
+                return;
+            }
+
+            let event = events.find(o => o.raidId == args[0].toLowerCase());
+
+            if (!event) {
+                message.reply('could not find an event with the supplied raidId.');
                 return;
             }
 
@@ -327,7 +466,7 @@ function initListeners() {
                 event = events.find(o => o.raidId == args[0].toLowerCase());
 
                 if (event.fireteam.split(',').length === 6 && event.startTime) {
-                    message.channel.send(`${event.fireteam.split(',').map(function (elem) { return client.users.get(elem) }).join(" ")} - the event ${event.raidId} has been filled and will start on ${moment(event.startTime).format('MMMM Do [@] HH:mm z')}.`);
+                    message.channel.send(`${event.fireteam.split(',').map(function (elem) { return client.users.get(elem) }).join(" ")} - the event ${event.raidId} has been filled and will start on ${moment(event.startTime).format('MMMM Do [@] HH:mm')} UTC`);
                 }
 
             } catch (err) {
@@ -340,14 +479,14 @@ function initListeners() {
 
         if (command === "fireteam") {
             if (!args[0]) {
-                message.reply('please supply an event raidID.');
+                message.reply('please supply an event raidId.');
                 return;
             }
 
             let event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (!event) {
-                message.reply('could not find an event with the supplied raidID.');
+                message.reply('could not find an event with the supplied raidId.');
                 return;
             }
 
@@ -366,7 +505,7 @@ function initListeners() {
 
         if (command === "join") {
             if (!args[0]) {
-                message.reply('please supply an event raidID.');
+                message.reply('please supply an event raidId.');
                 return;
             }
 
@@ -379,7 +518,7 @@ function initListeners() {
             }
 
             if (!event) {
-                message.reply('could not find an event with the supplied raidID.');
+                message.reply('could not find an event with the supplied raidId.');
                 return;
             }
 
@@ -413,14 +552,14 @@ function initListeners() {
 
         if (command === "leave") {
             if (!args[0]) {
-                message.reply('please supply an event raidID.');
+                message.reply('please supply an event raidId.');
                 return;
             }
 
             let event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (!event) {
-                message.reply('could not find an event with the supplied raidID.');
+                message.reply('could not find an event with the supplied raidId.');
                 return;
             }
 
@@ -442,7 +581,7 @@ function initListeners() {
 
         if (command === "kick") {
             if (!args[0]) {
-                message.reply('please supply an event raidID.');
+                message.reply('please supply an event raidId.');
                 return;
             }
 
@@ -455,11 +594,11 @@ function initListeners() {
             let userToKick = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
 
             if (!event) {
-                message.reply('could not find an event with the supplied raidID.');
+                message.reply('could not find an event with the supplied raidId.');
                 return;
             }
 
-            if (event.adminId == message.author.id) {
+            if (event.adminId !== message.author.id) {
                 message.reply(`only admins can kick people from events - please notify ${client.users.get(event.adminId).username} if you require someone to be kicked.`);
                 return;
             }
@@ -469,7 +608,7 @@ function initListeners() {
                 return;
             }
 
-            if (event.fireteam.split(',').indexOf(userToKick) > -1) {
+            if (!event.fireteam.split(',').includes(userToKick)) {
                 message.reply('the user you are trying to kick is not a member of this event.');
                 return;
             }
@@ -488,7 +627,7 @@ function initListeners() {
 
         if (command === "admin") {
             if (!args[0]) {
-                message.reply('please supply an event raidID.');
+                message.reply('please supply an event raidId.');
                 return;
             }
 
@@ -501,7 +640,7 @@ function initListeners() {
             let userToMod = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
 
             if (!event) {
-                message.reply('could not find an event with the supplied raidID.');
+                message.reply('could not find an event with the supplied raidId.');
                 return;
             }
 
@@ -529,14 +668,14 @@ function initListeners() {
 
         if (command === "cancel") {
             if (!args[0]) {
-                message.reply('please supply an event raidID.');
+                message.reply('please supply an event raidId.');
                 return;
             }
 
             let event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (!event) {
-                message.reply('could not find an event with the supplied raidID.');
+                message.reply('could not find an event with the supplied raidId.');
                 return;
             }
 
@@ -560,14 +699,14 @@ function initListeners() {
 
         if (command === "finish") {
             if (!args[0]) {
-                message.reply('please supply an event raidID.');
+                message.reply('please supply an event raidId.');
                 return;
             }
 
             let event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (!event) {
-                message.reply('could not find an event with the supplied raidID.');
+                message.reply('could not find an event with the supplied raidId.');
                 return;
             }
 
@@ -596,14 +735,14 @@ function initListeners() {
 
         if (["raidreport", "rr"].includes(command)) {
             if (!args[0]) {
-                message.reply('please supply an event raidID.');
+                message.reply('please supply an event raidId.');
                 return;
             }
 
             let event = await db.getEvent(args[0]);
 
             if (!event) {
-                message.reply('could not find an event with the supplied raidID.');
+                message.reply('could not find an event with the supplied raidId.');
                 return;
             }
 
@@ -630,7 +769,7 @@ function initListeners() {
             let messageString = "";
 
             for (let i = 0; i < events.length; i++) {
-                messageString += `${events[i].name} - ${(events[i].startTime ? `${moment(events[i].startTime).tz((creator ? creator.timezone : 'UTC')).format('MMMM Do [@] HH:mm z')}` : 'Not Set')} \n!join ${events[i].raidId} | Beginner estimate: ${events[i].beginnerEstimate} | Power: ${events[i].recommendedPower} | Members: ${events[i].fireteam.split(',').length}/6\n\n`;
+                messageString += `${events[i].name}${(events[i].sherpa ? ` (Sherpa)` : ``)} - ${(events[i].startTime ? `${moment(events[i].startTime).tz((creator ? creator.timezone : 'UTC')).format('MMMM Do [@] HH:mm z')}` : 'Not Set')} \n!join ${events[i].raidId} | Estimate: ${(events[i].sherpa ? events[i].beginnerEstimate : events[i].experiencedEstimate)} | Power: ${events[i].recommendedPower} | Members: ${events[i].fireteam.split(',').length}/6\n\n`;
             }
 
             message.channel.send((messageString ? `\`\`\`${messageString.trim()}\`\`\`` : "No events scheduled."));
@@ -651,7 +790,7 @@ function initListeners() {
 
         if (command === "details") {
             if (!args[0]) {
-                message.reply('please supply a raidID.');
+                message.reply('please supply a raidId.');
                 return;
             }
 

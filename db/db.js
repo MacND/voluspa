@@ -77,6 +77,30 @@ module.exports = {
         }
     },
 
+    putUserTwitch: async (discordId, twitch) => {
+        try {
+            let [rows, fields] = await pool.query('UPDATE users SET twitch = :twitch WHERE discordId = :discordId',
+                {
+                    discordId: discordId,
+                    twitch: twitch
+                });
+        } catch (err) {
+            throw new Error(err);
+        }
+    },
+
+    putUserNotification: async (discordId, notify) => {
+        try {
+            let [rows, fields] = await pool.query('UPDATE users SET newEventNotification = :notify WHERE discordId = :discordId',
+                {
+                    discordId: discordId,
+                    notify: notify
+                });
+        } catch (err) {
+            throw new Error(err);
+        }
+    },
+
     // Events table
 
     getEvent: async (raidId) => {
