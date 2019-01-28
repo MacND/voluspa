@@ -491,6 +491,11 @@ async function handleMessage(message) {
             return;
         }
 
+        if (!event.startTime) {
+            message.reply(`this event has not yet been scheduled.`);
+            return;
+        }
+
         if (event.adminId !== message.author.id) {
             message.reply(`you are not the admin of this event - the admin is ${client.users.get(event.adminId).username}.`);
             return;
