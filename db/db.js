@@ -213,6 +213,7 @@ module.exports = {
                     raidId: raidId,
                     adminId: adminId
                 });
+            return rows;
         } catch (err) {
             throw new Error(err);
         }
@@ -225,6 +226,7 @@ module.exports = {
                     raidId: raidId,
                     adminId: adminId
                 });
+            return rows;
         } catch (err) {
             throw new Error(err);
         }
@@ -236,6 +238,19 @@ module.exports = {
                 {
                     raidId: raidId,
                 });
+            return rows;
+        } catch (err) {
+            throw new Error(err);
+        }
+    },
+
+    deleteEventStartTime: async (raidId) => {
+        try {
+            var [rows, fields] = await pool.query(`UPDATE events SET startTime = NULL WHERE raidId = :raidId;`,
+                {
+                    raidId: raidId,
+                });
+            return rows;
         } catch (err) {
             throw new Error(err);
         }
