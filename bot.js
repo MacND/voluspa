@@ -199,7 +199,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
     }
 
@@ -307,7 +307,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
 
     }
@@ -346,7 +346,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
 
     }
@@ -420,7 +420,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
     }
 
@@ -453,7 +453,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
 
     }
@@ -510,7 +510,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
 
     }
@@ -553,7 +553,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
     }
 
@@ -634,7 +634,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
     }
 
@@ -667,7 +667,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
     }
 
@@ -719,7 +719,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
 
     }
@@ -766,7 +766,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
 
     }
@@ -801,7 +801,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
 
     }
@@ -842,7 +842,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
 
     }
@@ -877,7 +877,7 @@ async function handleMessage(message) {
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
-            message.reply('an error was thrown while trying to run the command - please check the logs.');
+            message.react("❌");
         }
 
     }
@@ -926,13 +926,13 @@ async function handleMessage(message) {
             } catch (err) {
                 console.log(err);
                 message.channel.stopTyping();
-                message.reply('an error was thrown while trying to run the command - please check the logs.');
+                message.react("❌");
             }
         }
 
     }
 
-    message.channel.stopTyping();
+    message.channel.stopTyping(true);
 
 };
 
