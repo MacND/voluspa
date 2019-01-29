@@ -195,7 +195,7 @@ async function handleMessage(message) {
             await db.putUserGsheet(discordId, copyResponse.id);
             await google.setTimetableTimezone(copyResponse.id, discordId, timezone)
             registeredUsers = await db.getUsers();
-            message.reply(`you have registered BNet tag ${bnetId} with timezone ${timezone}.`);
+            message.react("✅");
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
@@ -449,7 +449,7 @@ async function handleMessage(message) {
         try {
             await db.putSherpa(event.raidId, event.adminId);
             await pullEvents();
-            message.reply(`marked ${event.raidId} as a Sherpa run.`);
+            message.react("✅");
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
@@ -548,7 +548,7 @@ async function handleMessage(message) {
         try {
             await db.deleteEventStartTime(event.raidId);
             await pullEvents();
-            message.reply(`unscheduled ${event.raidId}.`);
+            message.react("✅");
 
         } catch (err) {
             console.log(err);
@@ -623,7 +623,7 @@ async function handleMessage(message) {
         try {
             await db.putFireteam(user.discordId, event.fireteamId);
             await pullEvents();
-            message.reply(`you have joined ${event.raidId}`);
+            message.react("✅");
 
             event = events.find(o => o.raidId == args[0].toLowerCase());
 
@@ -663,7 +663,7 @@ async function handleMessage(message) {
         try {
             await db.deleteFireteamMember(message.author.id, event.fireteamId);
             await pullEvents();
-            message.reply(`left ${event.raidId}`);
+            message.react("✅");
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
@@ -715,7 +715,7 @@ async function handleMessage(message) {
         try {
             await db.deleteFireteamMember(userToKick, event.fireteamId);
             await pullEvents();
-            message.reply(`kicked ${client.users.get(userToKick).username} from ${event.raidId}.`);
+            message.react("✅");
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
@@ -762,7 +762,7 @@ async function handleMessage(message) {
         try {
             await db.putEventAdmin(event.raidId, userToMod);
             await pullEvents();
-            message.reply(`has made ${client.users.get(userToMod).username} the admin of ${event.raidId}.`);
+            message.react("✅");
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
@@ -797,7 +797,7 @@ async function handleMessage(message) {
             await db.deleteEvent(event.raidId);
             await db.deleteFireteam(event.fireteamId);
             await pullEvents();
-            message.reply(`deleted event ${event.raidId} and its fireteam.`);
+            message.react("✅");
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
@@ -873,7 +873,7 @@ async function handleMessage(message) {
             await db.putEventRaidReport(event.raidId, args[1]);
             await pullEvents();
             await pullHistory();
-            message.reply(`set the Raid Report link for this event to <${args[1]}>`);
+            message.react("✅");
         } catch (err) {
             console.log(err);
             message.channel.stopTyping();
