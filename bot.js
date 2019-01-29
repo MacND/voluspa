@@ -104,6 +104,7 @@ client.on("ready", async () => {
 async function handleMessage(message) {
     if (message.author.bot) return;
     if (message.content.indexOf(config.prefix) !== 0) return;
+    message.channel.startTyping();
 
     const args = message.content.slice(config.prefix.length).trim().match(/(".*?"|[^"\s]+)+(?=\s*|\s*$)/g);
     args.forEach((arg, index) => {
@@ -119,6 +120,7 @@ async function handleMessage(message) {
 
     if (command === "die") {
         if (message.author.id !== config.ownerId) {
+            message.channel.stopTyping();
             return;
         }
         message.channel.send("Your light is lost...");
@@ -129,6 +131,7 @@ async function handleMessage(message) {
     if (command === "raidinfo") {
         if (!args[0]) {
             message.channel.send(`Available raids: ${activities.map(function (elem) { return elem.shortName }).join(", ")}.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -136,6 +139,7 @@ async function handleMessage(message) {
 
         if (!event) {
             message.channel.send(`Couldn't find an event with raidId ${args[0]}`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -156,16 +160,19 @@ async function handleMessage(message) {
 
         if (!user) {
             message.reply('you appear to already be registered - do `!userinfo` to view your current details.');
+            message.channel.stopTyping();
             return;
         }
 
         if (!args[0] || !args[0].includes('#')) {
             message.reply(`invalid Battle.Net ID supplied - please ensure you are using your full BNet ID, including the # dsicriminator.`);
+            message.channel.stopTyping();
             return;
         }
 
         if (!args[1] || !moment.tz.zone(args[1])) {
             message.reply(`invalid timezone supplied - for a list of acceptable timezones, do \`!timezone help\`.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -176,6 +183,7 @@ async function handleMessage(message) {
 
         if (response.data.files.length) {
             message.reply(`you already have a schedule spreadsheet - registration has not completed, please contact an admin.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -190,6 +198,7 @@ async function handleMessage(message) {
             message.reply(`you have registered BNet tag ${bnetId} with timezone ${timezone}.`);
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
     }
@@ -199,6 +208,7 @@ async function handleMessage(message) {
     if (["tz", "timezone"].includes(command)) {
         if (args[0] === 'help') {
             message.channel.send('You can find the list of acceptable timezones here: <https://github.com/MacND/the-oracle-engine/blob/master/timezones.json>');
+            message.channel.stopTyping();
             return;
         }
 
@@ -206,16 +216,19 @@ async function handleMessage(message) {
 
         if (!user) {
             message.reply('you don\'t appear to be registered - please register first.');
+            message.channel.stopTyping();
             return;
         }
 
         if (!moment.tz.zone(args[0])) {
             message.channel.send('Invalid timezone supplied.');
+            message.channel.stopTyping();
             return;
         }
 
         if (args[0] === user.timezone) {
             message.channel.send(`Your timezone is already set to ${args[0]}`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -237,16 +250,19 @@ async function handleMessage(message) {
 
         if (!user) {
             message.channel.send('Unable to find user - have you registered?');
+            message.channel.stopTyping();
             return;
         }
 
         if (!bnet.includes('#')) {
             message.channel.send('Invalid BNet ID supplied');
+            message.channel.stopTyping();
             return;
         }
 
         if (bnet === user.bnetId) {
             message.channel.send(`Your BNet ID is already set to ${bnet}`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -259,6 +275,7 @@ async function handleMessage(message) {
     if (command === "twitch") {
         if (!args[0]) {
             message.reply('please provide your Twitch username.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -267,16 +284,19 @@ async function handleMessage(message) {
 
         if (!user) {
             message.channel.send('Unable to find user - have you registered?');
+            message.channel.stopTyping();
             return;
         }
 
         if (twitch.includes(':', '/', '.')) {
             message.reply('invalid Twitch username supplied - did you provide a link instead?');
+            message.channel.stopTyping();
             return;
         }
 
         if (twitch === user.twitch) {
             message.reply(`your Twitch username is already set to ${user.twitch}.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -286,6 +306,7 @@ async function handleMessage(message) {
             message.react("✅");
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
 
@@ -298,11 +319,13 @@ async function handleMessage(message) {
 
         if (!user) {
             message.channel.send('Unable to find user - have you registered?');
+            message.channel.stopTyping();
             return;
         }
 
         if (!args[0]) {
             message.reply(`please provide either 'on' or 'off'.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -312,6 +335,7 @@ async function handleMessage(message) {
             notify = false;
         } else {
             message.reply(`invalid arguments supplied - provide either 'on' or 'off'.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -321,6 +345,7 @@ async function handleMessage(message) {
             message.react("✅");
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
 
@@ -333,6 +358,7 @@ async function handleMessage(message) {
 
         if (!user) {
             message.channel.send(`${client.users.get(searchUserId).username} is not registered.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -346,6 +372,7 @@ async function handleMessage(message) {
 
         if (!user) {
             message.reply('unable to find user - have you registered?');
+            message.channel.stopTyping();
             return;
         }
 
@@ -354,6 +381,7 @@ async function handleMessage(message) {
             message.react("✅");
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.react("⚠️");
         }
     }
@@ -371,6 +399,7 @@ async function handleMessage(message) {
     if (command === "make") {
         if (!args[0]) {
             message.channel.send(`Please supply an event raidId.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -378,6 +407,7 @@ async function handleMessage(message) {
 
         if (!activity) {
             message.channel.send(`Unable to find an event with raidId ${args[0]}.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -389,6 +419,7 @@ async function handleMessage(message) {
             message.reply(`created event with ID ${event.raidId}`);
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
     }
@@ -397,6 +428,7 @@ async function handleMessage(message) {
     if (command === "sherpa") {
         if (!args[0]) {
             message.reply(`please supply an event raidId.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -404,11 +436,13 @@ async function handleMessage(message) {
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (event.adminId !== message.author.id) {
             message.reply(`you are not the admin of this event - the admin is ${client.users.get(event.adminId).username}.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -418,6 +452,7 @@ async function handleMessage(message) {
             message.reply(`marked ${event.raidId} as a Sherpa run.`);
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
 
@@ -429,6 +464,7 @@ async function handleMessage(message) {
 
         if (!args[0]) {
             message.reply('please supply an event raidId.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -436,16 +472,19 @@ async function handleMessage(message) {
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (event.adminId !== message.author.id) {
             message.reply(`you are not the admin of this event - the admin is ${client.users.get(event.adminId).username}.`);
+            message.channel.stopTyping();
             return;
         }
 
         if (!args[1] && !args[2]) {
             message.reply('invalid date and time supplied.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -470,6 +509,7 @@ async function handleMessage(message) {
 
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
 
@@ -481,6 +521,7 @@ async function handleMessage(message) {
 
         if (!args[0]) {
             message.reply('please supply an event raidId.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -488,16 +529,19 @@ async function handleMessage(message) {
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (!event.startTime) {
             message.reply(`this event has not yet been scheduled.`);
+            message.channel.stopTyping();
             return;
         }
 
         if (event.adminId !== message.author.id) {
             message.reply(`you are not the admin of this event - the admin is ${client.users.get(event.adminId).username}.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -508,6 +552,7 @@ async function handleMessage(message) {
 
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
     }
@@ -516,6 +561,7 @@ async function handleMessage(message) {
     if (command === "fireteam") {
         if (!args[0]) {
             message.reply('please supply an event raidId.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -523,6 +569,7 @@ async function handleMessage(message) {
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -542,6 +589,7 @@ async function handleMessage(message) {
     if (command === "join") {
         if (!args[0]) {
             message.reply('please supply an event raidId.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -550,21 +598,25 @@ async function handleMessage(message) {
 
         if (!user) {
             message.reply('unable to join event - are you registered?');
+            message.channel.stopTyping();
             return;
         }
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (event.fireteam.split(',').length >= 6) {
             message.reply('this fireteam is currently full.');
+            message.channel.stopTyping();
             return;
         }
 
         if (event.fireteam.split(',').indexOf(message.author.id) != -1) {
             message.reply('you are already a member of this event\'s fireteam.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -581,6 +633,7 @@ async function handleMessage(message) {
 
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
     }
@@ -589,6 +642,7 @@ async function handleMessage(message) {
     if (command === "leave") {
         if (!args[0]) {
             message.reply('please supply an event raidId.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -596,11 +650,13 @@ async function handleMessage(message) {
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (event.adminId === message.author.id) {
             message.reply('you are the admin of this event - you must elevate another user with the `!admin` command, and then you can leave.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -610,6 +666,7 @@ async function handleMessage(message) {
             message.reply(`left ${event.raidId}`);
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
     }
@@ -618,11 +675,13 @@ async function handleMessage(message) {
     if (command === "kick") {
         if (!args[0]) {
             message.reply('please supply an event raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (!args[1]) {
             message.reply('please supply a username to kick from the event.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -631,21 +690,25 @@ async function handleMessage(message) {
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (event.adminId !== message.author.id) {
             message.reply(`only admins can kick people from events - please notify ${client.users.get(event.adminId).username} if you require someone to be kicked.`);
+            message.channel.stopTyping();
             return;
         }
 
         if (userToKick === message.author.id) {
             message.reply('you cannot kick yourself from an event.');
+            message.channel.stopTyping();
             return;
         }
 
         if (!event.fireteam.split(',').includes(userToKick)) {
             message.reply('the user you are trying to kick is not a member of this event.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -655,6 +718,7 @@ async function handleMessage(message) {
             message.reply(`kicked ${client.users.get(userToKick).username} from ${event.raidId}.`);
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
 
@@ -664,11 +728,13 @@ async function handleMessage(message) {
     if (command === "admin") {
         if (!args[0]) {
             message.reply('please supply an event raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (!args[1]) {
             message.reply('please supply a username to give admin rights to.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -677,16 +743,19 @@ async function handleMessage(message) {
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (event.adminId !== message.author.id) {
             message.reply('you must be the admin of this event to elevate another user.');
+            message.channel.stopTyping();
             return;
         }
 
         if (event.fireteam.split(',').indexOf(userToMod) < 0) {
             message.reply('the user you are trying to make an admin is not a member of this event.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -696,6 +765,7 @@ async function handleMessage(message) {
             message.reply(`has made ${client.users.get(userToMod).username} the admin of ${event.raidId}.`);
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
 
@@ -705,6 +775,7 @@ async function handleMessage(message) {
     if (command === "cancel") {
         if (!args[0]) {
             message.reply('please supply an event raidId.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -712,11 +783,13 @@ async function handleMessage(message) {
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (event.adminId !== message.author.id) {
             message.reply(`only admins can cancel events - please notify ${client.users.get(event.adminId).username} to cancel this event.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -727,6 +800,7 @@ async function handleMessage(message) {
             message.reply(`deleted event ${event.raidId} and its fireteam.`);
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
 
@@ -736,6 +810,7 @@ async function handleMessage(message) {
     if (command === "finish") {
         if (!args[0]) {
             message.reply('please supply an event raidId.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -743,16 +818,19 @@ async function handleMessage(message) {
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (event.adminId !== message.author.id) {
             message.reply(`only admins can complete events - please notify ${client.users.get(event.adminId).username} to complete this event.`);
+            message.channel.stopTyping();
             return;
         }
 
         if (moment(event.startTime).utc() > moment.utc()) {
             message.reply('you cannot finish an event that has not started.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -763,6 +841,7 @@ async function handleMessage(message) {
             message.reply(`marked ${args[0]} as completed with a length of ${moment.duration(moment.utc().diff(event.startTime)).format('H [hours,] mm [minutes]')}.`);
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
 
@@ -772,6 +851,7 @@ async function handleMessage(message) {
     if (["raidreport", "rr"].includes(command)) {
         if (!args[0]) {
             message.reply('please supply an event raidId.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -779,11 +859,13 @@ async function handleMessage(message) {
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
+            message.channel.stopTyping();
             return;
         }
 
         if (event.adminId !== message.author.id) {
             message.reply(`only admins can complete events - please notify ${client.users.get(event.adminId).username} to complete this event.`);
+            message.channel.stopTyping();
             return;
         }
 
@@ -794,6 +876,7 @@ async function handleMessage(message) {
             message.reply(`set the Raid Report link for this event to <${args[1]}>`);
         } catch (err) {
             console.log(err);
+            message.channel.stopTyping();
             message.reply('an error was thrown while trying to run the command - please check the logs.');
         }
 
@@ -829,6 +912,7 @@ async function handleMessage(message) {
     if (command === "details") {
         if (!args[0]) {
             message.reply('please supply a raidId.');
+            message.channel.stopTyping();
             return;
         }
 
@@ -841,11 +925,14 @@ async function handleMessage(message) {
                 message.channel.send(`Details for **${event.raidId}**:\n\t• ${event.name}${event.raidReportUrl ? ` - <${event.raidReportUrl}>` : ``}\n\t• Start${(event.finishTime ? 'ed' : 'ing')}: ${moment(event.startTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t${(event.finishTime ? `• Finished: ${moment(event.finishTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t` : ``)}• Fireteam: ${fireteam.map(function (elem) { return client.users.get(elem.discordId).username }).join(', ')}`);
             } catch (err) {
                 console.log(err);
+                message.channel.stopTyping();
                 message.reply('an error was thrown while trying to run the command - please check the logs.');
             }
         }
 
     }
+
+    message.channel.stopTyping();
 
 };
 
