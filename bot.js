@@ -19,7 +19,8 @@ const client = new Discord.Client({ disableEveryone: true });
 let activities,
     registeredUsers,
     events,
-    history;
+    history,
+    statusCounter = 0;
 
 // Functions and Helpers
 let Timer = {
@@ -93,12 +94,17 @@ function createTimers() {
 
 client.on("ready", async () => {
     console.log(`Successfully connected to Discord`);
-    client.user.setActivity(config.status);
+    //client.user.setActivity(config.status);
     activities = await db.getActivities();
     registeredUsers = await db.getUsers();
     await pullEvents();
     await pullHistory();
     client.on("message", handleMessage);
+    setInterval(() => {
+        let joinableEvents = events.filter((el) => { return (el.fireteam.split(',').length < 6); });
+        statusCounter = (statusCounter + 1) % joinableEvents.length;
+        client.user.setActivity(`!join ${joinableEvents[statusCounter].raidId}`);
+    }, 120000);
 });
 
 async function handleMessage(message) {
@@ -499,7 +505,7 @@ async function handleMessage(message) {
         try {
             res = await db.putEventStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.raidId, creator.discordId);
             await pullEvents();
-            message.reply(`set start time of ${event.raidId} to ${suggestedDateTime.format('YYYY-MM-DD HH:mm')} UTC`);
+            message.reply(`set start time of ${event.raidId} to ${suggestedDateTime.format('MMMM Do [@] HH:mm')} UTC`);
 
             event = events.find(o => o.raidId == args[0].toLowerCase());
 
