@@ -102,8 +102,16 @@ client.on("ready", async () => {
     client.on("message", handleMessage);
     setInterval(() => {
         let joinableEvents = events.filter((el) => { return (el.fireteam.split(',').length < 6); });
-        statusCounter = (statusCounter + 1) % joinableEvents.length;
-        client.user.setActivity(`!join ${joinableEvents[statusCounter].raidId}`);
+        let newStatus;
+
+        if (joinableEvents.length > 0) {
+            statusCounter = (statusCounter + 1) % joinableEvents.length;
+            newStatus = `!join ${joinableEvents[statusCounter].raidId}`;
+        } else {
+            newStatus = client.user.setActivity(config.status);
+        }
+
+        client.user.setActivity(newStatus);
     }, 120000);
 });
 
