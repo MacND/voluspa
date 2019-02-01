@@ -1,6 +1,5 @@
 // Require modules
-const Discord = require("discord.js");
-const google = require('./google/google.js');
+const cmd = require('./commands/commands.js');
 const db = require('./db/db.js');
 const moment = require('moment-timezone');
 const momentDurationFormatSetup = require("moment-duration-format");
@@ -8,12 +7,6 @@ momentDurationFormatSetup(moment);
 typeof moment.duration.fn.format === "function";
 typeof moment.duration.format === "function";
 moment.locale('en-gb');
-
-// Require files
-const config = require("./config.json");
-
-// Client declarations
-const client = new Discord.Client({ disableEveryone: true });
 
 // Variable declarations
 let activities,
@@ -62,7 +55,7 @@ async function notifyUsers(event) {
         }
 
         try {
-            client.users.get(user.discordId).send(`A new event has been created - **${event.raidId}** (${event.name}${(event.sherpa ? ', Sherpa' : '')}).`);
+            cmd.client.users.get(user.discordId).send(`A new event has been created - **${event.raidId}** (${event.name}${(event.sherpa ? ', Sherpa' : '')}).`);
         } catch (err) {
             console.log(err);
         }
@@ -82,7 +75,7 @@ function createTimers() {
         Timer.set(events[i].raidId, () => {
             events[i].fireteam.split(',').forEach((member, index) => {
                 let user = registeredUsers.find(o => o.discordId === member)
-                client.users.get(member).send(`In 10 minutes you are scheduled to take part in **${events[i].raidId}** (${activityData.name} ${activityData.type}).  In your timezone: ${moment(events[i].startTime).tz(user.timezone).format('MMMM Do [@] HH:mm z')}.  This will take around ${moment.duration(activityData.beginnerEstimate, 'seconds').format("h [hours] mm [minutes]")}.`);
+                cmd.client.users.get(member).send(`In 10 minutes you are scheduled to take part in **${events[i].raidId}** (${activityData.name} ${activityData.type}).  In your timezone: ${moment(events[i].startTime).tz(user.timezone).format('MMMM Do [@] HH:mm z')}.  This will take around ${moment.duration(activityData.beginnerEstimate, 'seconds').format("h [hours] mm [minutes]")}.`);
             })
         }, eventStart.clone().subtract(10, "minutes").toDate());
 
@@ -91,15 +84,13 @@ function createTimers() {
 }
 
 
-
-client.on("ready", async () => {
+cmd.client.on("ready", async () => {
     console.log(`Successfully connected to Discord`);
-    //client.user.setActivity(config.status);
     activities = await db.getActivities();
     registeredUsers = await db.getUsers();
     await pullEvents();
     await pullHistory();
-    client.on("message", handleMessage);
+    cmd.client.on("message", handleMessage);
     setInterval(() => {
         let joinableEvents = events.filter((el) => { return (el.fireteam.split(',').length < 6); });
         let newStatus;
@@ -108,64 +99,31 @@ client.on("ready", async () => {
             statusCounter = (statusCounter + 1) % joinableEvents.length;
             newStatus = `!join ${joinableEvents[statusCounter].raidId}`;
         } else {
-            newStatus = client.user.setActivity(config.status);
+            newStatus = cmd.client.user.setActivity(cmd.config.status);
         }
 
-        client.user.setActivity(newStatus);
+        cmd.client.user.setActivity(newStatus);
     }, 120000);
 });
 
 async function handleMessage(message) {
     if (message.author.bot) return;
-    if (message.content.indexOf(config.prefix) !== 0) return;
-    message.channel.startTyping();
+    if (message.content.indexOf(cmd.config.prefix) !== 0) return;
 
-    const args = message.content.slice(config.prefix.length).trim().match(/(".*?"|[^"\s]+)+(?=\s*|\s*$)/g);
+    const args = message.content.slice(cmd.config.prefix.length).trim().match(/(".*?"|[^"\s]+)+(?=\s*|\s*$)/g);
     args.forEach((arg, index) => {
         args[index] = arg.replace(/"/g, "");
     });
 
     const command = args.shift().toLowerCase();
 
-    if (command === "info") {
-        message.channel.send(`The Oracle Engine - <https://github.com/macnd/the-oracle-engine>`);
-    }
+    message.channel.startTyping();
 
-
-    if (command === "die") {
-        if (message.author.id !== config.ownerId) {
-            message.channel.stopTyping();
-            return;
-        }
-        message.channel.send("Your light is lost...");
-        client.destroy();
-    }
-
-
-    if (command === "raidinfo") {
-        if (!args[0]) {
-            message.channel.send(`Available raids: ${activities.map(function (elem) { return elem.shortName }).join(", ")}.`);
-            message.channel.stopTyping();
-            return;
-        }
-
-        let event = activities.find(o => o.shortName == args[0].toLowerCase());
-
-        if (!event) {
-            message.channel.send(`Couldn't find an event with raidId ${args[0]}`);
-            message.channel.stopTyping();
-            return;
-        }
-
-        let embed = new Discord.RichEmbed()
-            .setTitle(`${event.name} (${event.type})`)
-            .setColor(5517157)
-            .setDescription(`*"${event.tagline}"*\n${event.description}\n\`\`\`Short code: ${event.shortName}\nRecommended power: ${event.recommendedPower}\nBeginner estimate: ${moment().startOf('day').seconds(event.beginnerEstimate).format('H:mm')}\n\`\`\``)
-            .setURL(`${event.wikiUrl}`)
-            .setThumbnail(`https://gamezone.cool/img/${event.shortName}.png`)
-            .setFooter(`Gather your Fireteam - !make ${event.shortName}`)
-
-        message.channel.send(embed);
+    switch (command) {
+        case "info": cmd.info(message); break;
+        case "raidinfo": cmd.raidinfo(message, args, activities); break;
+        case "userinfo": cmd.userinfo(message, args, registeredUsers); break;
+        case "sheet": cmd.sheet(message, registeredUsers); break;
     }
 
 
@@ -252,7 +210,7 @@ async function handleMessage(message) {
             registeredUsers = await db.getUsers();
             message.react("✅");
         } catch (err) {
-            console.log('ERROR: ' + err);
+            console.log(err);
         }
 
     }
@@ -366,42 +324,7 @@ async function handleMessage(message) {
     }
 
 
-    if (command === "userinfo") {
-        let searchUserId = (args[0] ? client.users.find(user => user.username.toLowerCase() === args[0].toLowerCase()).id : message.author.id);
-        let user = registeredUsers.find(o => o.discordId === searchUserId);
-
-        if (!user) {
-            message.channel.send(`${client.users.get(searchUserId).username} is not registered.`);
-            message.channel.stopTyping();
-            return;
-        }
-
-        message.channel.send(`User information for ${client.users.get(searchUserId).username}:\`\`\`BNet ID: ${user.bnetId}\nTimezone: ${user.timezone}\nTwitch: ${(user.twitch ? user.twitch : 'Not set')}\nNotifications: ${(user.newEventNotification ? 'On' : 'Off')}\`\`\``);
-
-    }
-
-
-    if (command === "sheet") {
-        let user = registeredUsers.find(o => o.discordId === message.author.id);
-
-        if (!user) {
-            message.reply('unable to find user - have you registered?');
-            message.channel.stopTyping();
-            return;
-        }
-
-        try {
-            client.users.get(user.discordId).send(`Your GSheet can be found at https://docs.google.com/spreadsheets/d/${user.gsheeturl}`);
-            message.react("✅");
-        } catch (err) {
-            console.log(err);
-            message.channel.stopTyping();
-            message.react("⚠️");
-        }
-    }
-
-
-    if (command === "refresh" && message.author.id === config.ownerId) {
+    if (command === "refresh" && message.author.id === cmd.config.ownerId) {
         activities = await db.getActivities();
         registeredUsers = await db.getUsers();
         await pullEvents();
@@ -455,7 +378,7 @@ async function handleMessage(message) {
         }
 
         if (event.adminId !== message.author.id) {
-            message.reply(`you are not the admin of this event - the admin is ${client.users.get(event.adminId).username}.`);
+            message.reply(`you are not the admin of this event - the admin is ${cmd.client.users.get(event.adminId).username}.`);
             message.channel.stopTyping();
             return;
         }
@@ -491,7 +414,7 @@ async function handleMessage(message) {
         }
 
         if (event.adminId !== message.author.id) {
-            message.reply(`you are not the admin of this event - the admin is ${client.users.get(event.adminId).username}.`);
+            message.reply(`you are not the admin of this event - the admin is ${cmd.client.users.get(event.adminId).username}.`);
             message.channel.stopTyping();
             return;
         }
@@ -518,7 +441,7 @@ async function handleMessage(message) {
             event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (event.fireteam.split(',').length === 6 && event.startTime) {
-                message.channel.send(`${event.fireteam.split(',').map(function (elem) { return client.users.get(elem) }).join(" ")} - the event ${event.raidId} has been filled and will start on ${moment(event.startTime).format('MMMM Do [@] HH:mm')} UTC`);
+                message.channel.send(`${event.fireteam.split(',').map(function (elem) { return cmd.client.users.get(elem) }).join(" ")} - the event ${event.raidId} has been filled and will start on ${moment(event.startTime).format('MMMM Do [@] HH:mm')} UTC`);
             }
 
         } catch (err) {
@@ -554,7 +477,7 @@ async function handleMessage(message) {
         }
 
         if (event.adminId !== message.author.id) {
-            message.reply(`you are not the admin of this event - the admin is ${client.users.get(event.adminId).username}.`);
+            message.reply(`you are not the admin of this event - the admin is ${cmd.client.users.get(event.adminId).username}.`);
             message.channel.stopTyping();
             return;
         }
@@ -591,7 +514,7 @@ async function handleMessage(message) {
 
         event.fireteam.split(',').forEach((member, index) => {
             console.log(member);
-            messageString += `${client.users.get(member).username}${(member == event.adminId ? " (Admin)" : "")}\n`;
+            messageString += `${cmd.client.users.get(member).username}${(member == event.adminId ? " (Admin)" : "")}\n`;
         });
 
         message.channel.send(`Fireteam for ${event.raidId}\n\`\`\`\n${messageString}\`\`\``);
@@ -642,7 +565,7 @@ async function handleMessage(message) {
             event = events.find(o => o.raidId == args[0].toLowerCase());
 
             if (event.fireteam.split(',').length == 6 && event.startTime) {
-                message.channel.send(`${event.fireteam.split(',').map(function (elem) { return client.users.get(elem) }).join(" ")} - the event ${event.raidId} has been filled and will start on ${moment(event.startTime).format('MMMM Do [@] HH:mm z')}.`);
+                message.channel.send(`${event.fireteam.split(',').map(function (elem) { return cmd.client.users.get(elem) }).join(" ")} - the event ${event.raidId} has been filled and will start on ${moment(event.startTime).format('MMMM Do [@] HH:mm z')}.`);
             }
 
         } catch (err) {
@@ -700,7 +623,7 @@ async function handleMessage(message) {
         }
 
         let event = events.find(o => o.raidId == args[0].toLowerCase());
-        let userToKick = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
+        let userToKick = cmd.client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
@@ -709,7 +632,7 @@ async function handleMessage(message) {
         }
 
         if (event.adminId !== message.author.id) {
-            message.reply(`only admins can kick people from events - please notify ${client.users.get(event.adminId).username} if you require someone to be kicked.`);
+            message.reply(`only admins can kick people from events - please notify ${cmd.client.users.get(event.adminId).username} if you require someone to be kicked.`);
             message.channel.stopTyping();
             return;
         }
@@ -753,7 +676,7 @@ async function handleMessage(message) {
         }
 
         let event = events.find(o => o.raidId == args[0].toLowerCase());
-        let userToMod = client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
+        let userToMod = cmd.client.users.find(user => user.username.toLowerCase() === args[1].toLowerCase()).id;
 
         if (!event) {
             message.reply('could not find an event with the supplied raidId.');
@@ -802,7 +725,7 @@ async function handleMessage(message) {
         }
 
         if (event.adminId !== message.author.id) {
-            message.reply(`only admins can cancel events - please notify ${client.users.get(event.adminId).username} to cancel this event.`);
+            message.reply(`only admins can cancel events - please notify ${cmd.client.users.get(event.adminId).username} to cancel this event.`);
             message.channel.stopTyping();
             return;
         }
@@ -837,7 +760,7 @@ async function handleMessage(message) {
         }
 
         if (event.adminId !== message.author.id) {
-            message.reply(`only admins can complete events - please notify ${client.users.get(event.adminId).username} to complete this event.`);
+            message.reply(`only admins can complete events - please notify ${cmd.client.users.get(event.adminId).username} to complete this event.`);
             message.channel.stopTyping();
             return;
         }
@@ -878,7 +801,7 @@ async function handleMessage(message) {
         }
 
         if (event.adminId !== message.author.id) {
-            message.reply(`only admins can complete events - please notify ${client.users.get(event.adminId).username} to complete this event.`);
+            message.reply(`only admins can complete events - please notify ${cmd.client.users.get(event.adminId).username} to complete this event.`);
             message.channel.stopTyping();
             return;
         }
@@ -936,7 +859,7 @@ async function handleMessage(message) {
 
         if (event) {
             try {
-                message.channel.send(`Details for **${event.raidId}**:\n\t• ${event.name}${event.raidReportUrl ? ` - <${event.raidReportUrl}>` : ``}\n\t• Start${(event.finishTime ? 'ed' : 'ing')}: ${moment(event.startTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t${(event.finishTime ? `• Finished: ${moment(event.finishTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t` : ``)}• Fireteam: ${fireteam.map(function (elem) { return client.users.get(elem.discordId).username }).join(', ')}`);
+                message.channel.send(`Details for **${event.raidId}**:\n\t• ${event.name}${event.raidReportUrl ? ` - <${event.raidReportUrl}>` : ``}\n\t• Start${(event.finishTime ? 'ed' : 'ing')}: ${moment(event.startTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t${(event.finishTime ? `• Finished: ${moment(event.finishTime).tz(requester ? requester.timezone : 'UTC').format('MMMM Do [@] HH:mm z')}\n\t` : ``)}• Fireteam: ${fireteam.map(function (elem) { return cmd.client.users.get(elem.discordId).username }).join(', ')}`);
             } catch (err) {
                 console.log(err);
                 message.channel.stopTyping();
@@ -949,5 +872,3 @@ async function handleMessage(message) {
     message.channel.stopTyping(true);
 
 };
-
-client.login(config.token);
