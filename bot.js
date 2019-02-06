@@ -1,6 +1,8 @@
 // Require modules
-const cmd = require('./commands/commands.js');
-const db = require('./db/db.js');
+const pool = require('./db/getpool.js');
+const db = require('./db/db.js')(pool);
+const cmd = require('./cmd/cmd.js')(db);
+
 const moment = require('moment-timezone');
 const momentDurationFormatSetup = require("moment-duration-format");
 momentDurationFormatSetup(moment);
@@ -120,10 +122,11 @@ async function handleMessage(message) {
     message.channel.startTyping();
 
     switch (command) {
-        case "info": cmd.info(message); break;
-        case "raidinfo": cmd.raidinfo(message, args, activities); break;
-        case "userinfo": cmd.userinfo(message, args, registeredUsers); break;
-        case "sheet": cmd.sheet(message, registeredUsers); break;
+        case "info": await cmd.info(message); break;
+        case "raidinfo": await cmd.raidinfo(message, args, activities); break;
+        case "userinfo": await cmd.userinfo(message, args, registeredUsers); break;
+        case "sheet": await cmd.sheet(message, registeredUsers); break;
+        case "twitch": registeredUsers = await cmd.twitch(message, args, registeredUsers); break;
     }
 
 
@@ -240,47 +243,6 @@ async function handleMessage(message) {
 
         await db.putUserBnet(bnet, message.author.id);
         registeredUsers = await db.getUsers();
-
-    }
-
-
-    if (command === "twitch") {
-        if (!args[0]) {
-            message.reply('please provide your Twitch username.');
-            message.channel.stopTyping();
-            return;
-        }
-
-        let twitch = args[0];
-        let user = registeredUsers.find(o => o.discordId == message.author.id);
-
-        if (!user) {
-            message.channel.send('Unable to find user - have you registered?');
-            message.channel.stopTyping();
-            return;
-        }
-
-        if (twitch.includes(':', '/', '.')) {
-            message.reply('invalid Twitch username supplied - did you provide a link instead?');
-            message.channel.stopTyping();
-            return;
-        }
-
-        if (twitch === user.twitch) {
-            message.reply(`your Twitch username is already set to ${user.twitch}.`);
-            message.channel.stopTyping();
-            return;
-        }
-
-        try {
-            await db.putUserTwitch(message.author.id, twitch);
-            registeredUsers = await db.getUsers();
-            message.react("✅");
-        } catch (err) {
-            console.log(err);
-            message.channel.stopTyping();
-            message.react("❌");
-        }
 
     }
 
