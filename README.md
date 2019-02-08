@@ -1,8 +1,7 @@
 # the-oracle-engine
-[![Build Status](https://travis-ci.com/MacND/the-oracle-engine.svg?branch=master)](https://travis-ci.com/MacND/the-oracle-engine)  
-A Discord.js bot to help with arranging raids and get D2 character stats inside Discord.
+[![Build Status](https://travis-ci.com/MacND/the-oracle-engine.svg?branch=refactor-2)](https://travis-ci.com/MacND/the-oracle-engine)  
 
-Shamelessly developed using [eslachance's Gist](https://gist.github.com/eslachance/3349734a98d30011bb202f47342601d3) as a starting point.
+A Discord.js bot to help with arranging raids and get D2 character stats inside Discord.
 
 ## Contributing
 Currently I'm rewriting the bot on branch `refactor-2` so that it's more modular and easier to maintain.  Any PRs should be submitted to that branch.  Coding guidlines are as follows:  
