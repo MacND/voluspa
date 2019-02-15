@@ -1,4 +1,4 @@
-# the-oracle-engine
+# voluspa
 [![Build Status](https://travis-ci.com/MacND/the-oracle-engine.svg?branch=master)](https://travis-ci.com/MacND/the-oracle-engine)  
 
 A Discord.js bot to help with arranging raids and get D2 character stats inside Discord.
