@@ -1,3 +1,5 @@
+global.__basedir = __dirname;
+
 const Discord = require('discord.js');
 const Enmap = require('enmap');
 const fs = require('fs');

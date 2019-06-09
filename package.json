@@ -6,6 +6,7 @@
   "dependencies": {
     "availability-schedule": "^1.0.2",
     "discord.js": "^11.5.1",
+    "enmap": "^4.8.7",
     "forever": "^1.0.0",
     "moment": "^2.24.0",
     "moment-duration-format": "^2.3.2",

@@ -2,7 +2,7 @@ module.exports = (client, message) => {
     if (message.author.bot) return;
     if (message.content.indexOf(client.config.prefix) !== 0) return;
   
-    const args = message.content.slice(cmd.config.prefix.length).trim().match(/(".*?"|[^"\s]+)+(?=\s*|\s*$)/g);
+    const args = message.content.slice(client.config.prefix.length).trim().match(/(".*?"|[^"\s]+)+(?=\s*|\s*$)/g);
     args.forEach((arg, index) => {
         args[index] = arg.replace(/"/g, '');
     });
