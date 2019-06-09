@@ -26,7 +26,7 @@ exports.run = async (client, message, args) => {
       return;
     }
 
-    let [rows, fields] = await pool.query('UPDATE users SET twitch = :twitch WHERE discordId = :discordId',
+    let [rows, fields] = await client.dbpool.query('UPDATE users SET twitch = :twitch WHERE discordId = :discordId',
       {
           discordId: user.discordId,
           twitch: twitch
