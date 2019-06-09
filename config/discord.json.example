@@ -1,0 +1,6 @@
+{
+  "token"  : "discord_bot_user_token",
+  "prefix" : "!",
+  "status" : "default_playing_status",
+  "ownerId": "your_discord_id"
+}

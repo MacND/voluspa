@@ -1,11 +1,11 @@
 const Discord = require("discord.js");
 const Enmap = require("enmap");
 const fs = require("fs");
-const dbpool = require('./utils/getpool.js');
+const dbpool = require('./utils/createDbPool.js');
 const moment = require('./utils/moment.js');
 
 const client = new Discord.Client({ disableEveryone: true });
-const config = require("./config.json");
+const config = require("./config/discord.json");
 client.config = config;
 
 fs.readdir("./events/", (err, files) => {

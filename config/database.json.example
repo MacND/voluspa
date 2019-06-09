@@ -1,0 +1,6 @@
+{
+  "dbhost" : "database_ip_or_hostname",
+  "dbname" : "database_name",
+  "dbuser" : "database_username",
+  "dbpass" : "database_password"
+}
