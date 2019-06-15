@@ -4,7 +4,7 @@ module.exports = (client, message) => {
 
   const args = message.content.slice(client.config.prefix.length).trim().match(/(".*?"|[^"\s]+)+(?=\s*|\s*$)/g);
   args.forEach((arg, index) => {
-      args[index] = arg.replace(/"/g, '');
+    args[index] = arg.replace(/"/g, '');
   });
   const command = args.shift().toLowerCase();
 

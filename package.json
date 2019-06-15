@@ -18,8 +18,7 @@
     "eslint": "^5.16.0"
   },
   "scripts": {
-    "lint": "eslint bot.js db/db.js google/google.js",
-    "pretest": "npm run lint",
+    "pretest": "eslint . --fix",
     "test": "echo \"No tests\""
   },
   "keywords": [],
