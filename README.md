@@ -1,5 +1,5 @@
 # voluspa
-[![Build Status](https://travis-ci.com/MacND/voluspa.svg?branch=master)](https://travis-ci.com/MacND/voluspa)  
+[![Build Status](https://travis-ci.com/MacND/voluspa.svg?branch=dev)](https://travis-ci.com/MacND/voluspa)  
 
 A Discord.js bot to help with arranging raids and get D2 character stats inside Discord.
 
