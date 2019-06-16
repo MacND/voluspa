@@ -9,7 +9,7 @@ module.exports = {
       let command = client.commands.get(args[0]);
 
       if (!command) {
-        message.reply(`Sorry, I couldn't find a command with that name.`)
+        message.reply('Sorry, I couldn\'t find a command with that name.');
         return;
       }
 
