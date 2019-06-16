@@ -3,36 +3,8 @@ let moment = require(__basedir + '/utils/moment.js');
 module.exports = {
   run: async (client, message, args) => {
     try {
-      async function getUsers() {
-        try {
-          let [
-            rows,
-            fields
-          ] = await client.dbpool.query('SELECT * FROM users;');
-          return rows;
-        } catch (err) {
-          throw new Error(err);
-        }
-      }
-
-      async function putUser(discordId, bnetId, timezone) {
-        try{
-        let [
-          rows,
-          fields
-        ] = await client.dbpool.query('INSERT INTO users (discordId, bnetId, timezone) VALUES (:discordId, :bnetId, :timezone);',
-          {
-            discordId,
-            bnetId,
-            timezone
-          }
-        );
-        } catch (err) {
-          throw new Error(err)
-        }
-      }
-
-      let users = await getUsers();
+      let query = client.database.get('getUsers');
+      let users = await query.run();
       let user = users.find(o => o.discordId == message.author.id);
 
       if (user) {
@@ -54,7 +26,8 @@ module.exports = {
       let timezone = args[1];
       let discordId = message.author.id;
 
-      await putUser(discordId, bnetId, timezone);
+      query = client.database.get('putUser');
+      await query.run(discordId, bnetId, timezone);
       message.react('✅');
     } catch (err) {
       message.react('❌');
