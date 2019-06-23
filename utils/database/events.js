@@ -103,4 +103,17 @@ module.exports = pool => ({
       throw new Error(err);
     }
   },
+
+  delete: async (joinCode) => {
+    try {
+      let rows = await pool.query('DELETE FROM events WHERE join_code = :joinCode;',
+        {
+          joinCode
+        }
+      );
+      return rows;
+    } catch (err) {
+      throw new Error(err);
+    }
+  }
 });
