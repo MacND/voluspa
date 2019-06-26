@@ -51,7 +51,7 @@ module.exports = pool => ({
     }
   },
 
-  putBnet: async(discordId, bnet) => {
+  putBnet: async (discordId, bnet) => {
     try {
       let rows = await pool.query('UPDATE users SET bnet_id = :bnet WHERE discord_id = :discordId;',
         {
