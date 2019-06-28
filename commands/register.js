@@ -3,9 +3,7 @@ let moment = require(__basedir + '/utils/moment.js');
 module.exports = {
   run: async (client, message, args) => {
     try {
-      let query = client.database.get('getUsers');
-      let users = await query.run();
-      let user = users.find(o => o.discordId == message.author.id);
+      let user = await client.db.users.getByDiscordId(message.author.id);
 
       if (user) {
         message.reply('You appear to already be registered - do `!userinfo` to view your current details.');
@@ -26,8 +24,7 @@ module.exports = {
       let timezone = args[1];
       let discordId = message.author.id;
 
-      query = client.database.get('putUser');
-      await query.run(discordId, bnetId, timezone);
+      await client.db.users.post(discordId, bnetId, timezone);
       message.react('✅');
     } catch (err) {
       message.react('❌');
