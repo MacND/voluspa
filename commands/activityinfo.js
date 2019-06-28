@@ -1,0 +1,34 @@
+const Discord = require('discord.js');
+const moment = require(`${__basedir}/utils/moment.js`);
+
+module.exports = {
+  run: async (client, message, args) => {
+    try {
+      if (!args[0]) {
+        let activities = await client.db.activities.get();
+        message.channel.send(`Available activities: ${activities.map(elem => elem.nickname).join(', ')}.`);
+        return;
+      }
+
+      let activity = await client.db.activities.getByNickname(args[0].toLowerCase());
+
+      if (!activity) {
+        message.channel.send(`Couldn't find an activity with nickname ${args[0]}`);
+        return;
+      }
+
+      let embed = new Discord.RichEmbed().
+        setTitle(`${activity.name}`).
+        setColor(5517157).
+        setDescription(activity.tagline).
+        setThumbnail(`https://gamezone.cool/img/${activity.nickname}.png`).
+        setFooter(`Gather your Fireteam - !make ${activity.nickname}`);
+
+      message.channel.send(embed);
+    } catch (err) {
+      throw new Error(err);
+    }
+  },
+
+  help: 'Get information about activities.  `!activityinfo` with no arguments lists all available activities, `!activityinfo` with an activity nickname shows extended information.'
+};
