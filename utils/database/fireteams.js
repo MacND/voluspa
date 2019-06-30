@@ -1,8 +1,34 @@
 module.exports = pool => ({
   get: async () => {
     try {
-      let [rows, fields] = await pool.query('SELECT event_id, GROUP_CONCAT(user_id) AS guardians FROM fireteams GROUP BY event_id;');
+      let [rows, fields] = await pool.query('SELECT event_id, GROUP_CONCAT(discord_id) AS discord_id FROM fireteams GROUP BY event_id;');
       return rows;
+    } catch (err) {
+      throw new Error(err);
+    }
+  },
+
+  getByEventId: async (eventId) => {
+    try {
+      let [rows, fields] = await pool.query('SELECT GROUP_CONCAT(discord_id) AS discord_id FROM fireteams WHERE event_id = :eventId GROUP BY event_id;',
+        {
+          eventId
+        }
+      );
+      return rows[0];
+    } catch (err) {
+      throw new Error(err);
+    }
+  },
+
+  getAdminsByEventId: async (eventId) => {
+    try {
+      let [rows, fields] = await pool.query('SELECT GROUP_CONCAT(discord_id) AS discord_id FROM fireteams WHERE event_id = :eventId AND admin = true GROUP BY event_id;',
+        {
+          eventId
+        }
+      );
+      return rows[0];
     } catch (err) {
       throw new Error(err);
     }
@@ -10,7 +36,7 @@ module.exports = pool => ({
 
   put: async (userId, eventId) => {
     try {
-      let [rows, fields] = await pool.query('INSERT INTO fireteams (user_id, event_id) VALUES (:userId, :eventId);',
+      let [rows, fields] = await pool.query('INSERT INTO fireteams (discord_id, event_id) VALUES (:userId, :eventId);',
         {
           userId,
           eventId
@@ -38,7 +64,7 @@ module.exports = pool => ({
 
   deleteMember: async (userId, eventId) => {
     try {
-      let [rows, fields] = await pool.query('DELETE FROM fireteams WHERE user_id = :userId AND event_id = :eventId;',
+      let [rows, fields] = await pool.query('DELETE FROM fireteams WHERE discord_id = :userId AND event_id = :eventId;',
         {
           userId,
           eventId

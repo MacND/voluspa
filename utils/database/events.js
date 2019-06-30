@@ -1,7 +1,7 @@
 module.exports = pool => ({
   get: async () => {
     try {
-      let [rows, fields] = await pool.query('SELECT * FROM events e INNER JOIN activities a ON a.id = e.activity_id');
+      let [rows, fields] = await pool.query('SELECT * FROM events');
       return rows;
     } catch (err) {
       throw new Error(err);
@@ -10,12 +10,12 @@ module.exports = pool => ({
 
   getById: async (id) => {
     try {
-      let [rows, fields] = await pool.query('SELECT * FROM events e INNER JOIN activities a ON a.id = e.activity_id WHERE e.id = :id',
+      let [rows, fields] = await pool.query('SELECT * FROM events WHERE id = :id',
         {
           id
         }
       );
-      return rows;
+      return rows[0];
     } catch (err) {
       throw new Error(err);
     }
@@ -23,34 +23,26 @@ module.exports = pool => ({
   
   getByJoinCode: async (joinCode) => {
     try {
-      let [rows, fields] = await pool.query('SELECT * FROM events e INNER JOIN activities a ON a.id = e.activity_id WHERE join_code = :joinCode;',
+      let [rows, fields] = await pool.query('SELECT * FROM events WHERE join_code = :joinCode;',
         {
           joinCode
         }
       );
-      return rows;
+      return rows[0];
     } catch (err) {
       throw new Error(err);
     }
   },
 
-  post: async (creatorId, activityId, activityNickname, openedTime) => {
+  post: async (creatorId, activityId, openedTime) => {
     try {
-      let [rows, fields] = await pool.query(
-        `
-        START TRANSACTION; 
-        INSERT INTO events (activity_id, opened_time) VALUES (:activityId, :openedTime);
-        SELECT @eventId:=LAST_INSERT_ID();
-        SELECT @activityCount:=(SELECT COUNT(activity_id) FROM events WHERE activity_id = :activity_id);
-        INSERT INTO fireteams(user_id, event_id, admin) VALUES(:creatorId, @eventId, true);
-        UPDATE events SET join_code = CONCAT(activityNickname, '-', @activityCount);
-        COMMIT;`,
-        {
-          creatorId,
-          activityId,
-          openedTime,
-          activityNickname
-        }
+      let [rows, fields] = await pool.query(`
+        CALL make_event(:activityId, :openedTime, :creatorId, @join_code); SELECT @join_code AS join_code;`,
+      {
+        creatorId,
+        activityId,
+        openedTime
+      }
       );
       return rows;
     } catch (err) {

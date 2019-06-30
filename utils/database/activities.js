@@ -11,9 +11,9 @@ module.exports = pool => ({
   getByNickname: async (nickname) => {
     try {
       let [rows, fields] = await pool.query('SELECT * FROM activities WHERE nickname = :nickname;',
-      {
-        nickname
-      }
+        {
+          nickname
+        }
       );
       return rows[0];
     } catch (err) {
@@ -24,9 +24,9 @@ module.exports = pool => ({
   getByID: async (id) => {
     try {
       let [rows, fields] = await pool.query('SELECT * FROM activities WHERE id = :id;',
-      {
-        id
-      }
+        {
+          id
+        }
       );
       return rows;
     } catch (err) {

@@ -24,7 +24,7 @@ module.exports = {
         return;
       }
 
-      await client.db.users.putTwitch(message.author.id, twitch)
+      await client.db.users.putTwitch(message.author.id, twitch);
     } catch (err) {
       throw new Error(err);
     }
