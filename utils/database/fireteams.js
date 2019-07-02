@@ -34,6 +34,20 @@ module.exports = pool => ({
     }
   },
 
+  getNextAdmin: async (eventId, currentAdminId) => {
+    try {
+      let [rows, fields] = await pool.query('SELECT discord_id FROM fireteams WHERE event_id = :eventId AND `admin` = TRUE AND discord_id NOT LIKE :currentAdminId ORDER BY join_date ASC LIMIT 1;',
+        {
+          eventId,
+          currentAdminId
+        }
+      );
+      return rows[0];
+    } catch (err) {
+      throw new Error(err);
+    }
+  },
+
   put: async (userId, eventId, reserve=0) => {
     try {
       let [rows, fields] = await pool.query('INSERT INTO fireteams (discord_id, event_id, reserve) VALUES (:userId, :eventId, :reserve);',
