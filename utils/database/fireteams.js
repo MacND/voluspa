@@ -34,12 +34,13 @@ module.exports = pool => ({
     }
   },
 
-  put: async (userId, eventId) => {
+  put: async (userId, eventId, reserve=0) => {
     try {
-      let [rows, fields] = await pool.query('INSERT INTO fireteams (discord_id, event_id) VALUES (:userId, :eventId);',
+      let [rows, fields] = await pool.query('INSERT INTO fireteams (discord_id, event_id, reserve) VALUES (:userId, :eventId, :reserve);',
         {
           userId,
-          eventId
+          eventId,
+          reserve
         }
       );
       return rows;

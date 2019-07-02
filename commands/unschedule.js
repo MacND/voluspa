@@ -18,7 +18,7 @@ module.exports = {
       }
 
       await client.db.events.putStartTime(null, event.join_code);
-      message.react("✅");
+      message.react('✅');
     } catch (err) {
       throw new Error(err);
     }
