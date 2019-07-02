@@ -1,13 +1,12 @@
 module.exports = {
   run: async (client, message, args) => {
+  try {
     /* 
       Code in this function has access to the Discord client,
       the original message object, the arguments provided.
 
       You can also access the database pool via client.dbpool.
     */
-  try {
-     // do stuff
   } catch (err) {
       throw new Error(err);
     }
