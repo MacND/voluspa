@@ -1,7 +1,7 @@
 {
   "name": "the-oracle-engine",
-  "version": "1.0.0",
-  "description": "A Discord.js bot to help with arranging raids and get D2 character stats inside Discord.",
+  "version": "0.1.0",
+  "description": "A Discord.js bot to help arrange Destiny 2 activities.",
   "main": "bot.js",
   "dependencies": {
     "availability-schedule": "^1.0.2",
