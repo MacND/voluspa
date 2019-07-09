@@ -34,14 +34,24 @@ module.exports = pool => ({
     }
   },
 
-  post: async (creatorId, activityId, openedTime) => {
+  getNext: async () => {
+    try {
+      let [rows, fields] = await pool.query('SELECT * FROM vw_next_3_events;');
+      return rows;
+    } catch (err) {
+      throw new Error(err);
+    }
+  },
+
+  post: async (creatorId, activityId, openedTime, private) => {
     try {
       let [rows, fields] = await pool.query(`
-        CALL make_event(:activityId, :openedTime, :creatorId, @join_code); SELECT @join_code AS join_code;`,
+        CALL make_event(:activityId, :openedTime, :creatorId, :private, @join_code); SELECT @join_code AS join_code;`,
       {
         creatorId,
         activityId,
-        openedTime
+        openedTime,
+        private
       }
       );
       return rows;
@@ -50,12 +60,12 @@ module.exports = pool => ({
     }
   },
 
-  putStartTime: async (startTime, joinCode) => {
+  putStartTime: async (startTime, eventId) => {
     try {
-      let [rows, fields] = await pool.query('UPDATE events SET start_time = :startTime WHERE join_code = :joinCode;',
+      let [rows, fields] = await pool.query('UPDATE events SET start_time = :startTime WHERE id = :eventId;',
         {
           startTime,
-          joinCode
+          eventId
         }
       );
       return rows;
@@ -64,12 +74,12 @@ module.exports = pool => ({
     }
   },
 
-  putFinishTime: async (finishTime, joinCode) => {
+  putFinishTime: async (finishTime, eventId) => {
     try {
-      let [rows, fields] = await pool.query('UPDATE events SET finish_time = :finishTime WHERE join_code = :joinCode',
+      let [rows, fields] = await pool.query('UPDATE events SET finish_time = :finishTime WHERE id = :eventId',
         {
           finishTime,
-          joinCode
+          eventId
         }
       );
       return rows;
@@ -78,16 +88,16 @@ module.exports = pool => ({
     }
   },
   
-  putRaidReport: async (rrLink, joinCode) => {
+  putRaidReport: async (rrLink, eventId) => {
     try {
       let [
         rows,
         fields
       ] = await pool.query(
-        'UPDATE events SET raidReportUrl = :rrLink WHERE join_code = :joinCode',
+        'UPDATE events SET raidReportUrl = :rrLink WHERE id = :eventId',
         {
           rrLink,
-          joinCode
+          eventId
         }
       );
       return rows;
@@ -96,11 +106,11 @@ module.exports = pool => ({
     }
   },
 
-  delete: async (joinCode) => {
+  delete: async (eventId) => {
     try {
-      let [rows, fields] = await pool.query('DELETE FROM events WHERE join_code = :joinCode;',
+      let [rows, fields] = await pool.query('DELETE FROM events WHERE id = :eventId;',
         {
-          joinCode
+          eventId
         }
       );
       return rows;

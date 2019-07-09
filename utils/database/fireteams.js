@@ -63,6 +63,20 @@ module.exports = pool => ({
     }
   },
 
+  putAdmin: async (userId, eventId) => {
+    try {
+      let [rows, fields] = await pool.query('UPDATE fireteams SET admin = true WHERE discord_id = :userId AND event_id = :eventId;',
+        {
+          userId,
+          eventId
+        }
+      );
+      return rows;
+    } catch (err) {
+      throw new Error(err);
+    }
+  },
+
   delete: async (eventId) => {
     try {
       let [rows, fields] = await pool.query('DELETE FROM fireteams WHERE event_id = :eventId;',
