@@ -1,4 +1,5 @@
 let moment = require(__basedir + '/utils/moment.js');
+let pinger = require(__basedir + '/utils/pinger.js');
 
 module.exports = {
   run: async (client, message, args) => {
@@ -24,12 +25,22 @@ module.exports = {
       }
 
       let user = await client.db.users.getByDiscordId(message.author.id);
+
       moment.tz.setDefault(user.timezone);
       let suggestedDateTime = moment.tz(moment(args[2], 'HH:mm').day(args[1]), user.timezone);
       moment.tz.setDefault();
 
-      await client.db.events.putStartTime(suggestedDateTime.format('YYYY-MM-DD HH:mm'), event.join_code);
-      message.reply(`Set start time of ${event.join_code} to ${suggestedDateTime.format('MMMM Do [@] HH:mm')} UTC`);
+      if (suggestedDateTime < moment().tz(user.timezone)) {
+        suggestedDateTime.add(7, 'd');
+      }
+
+      await client.db.events.putStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.join_code);
+      message.reply(`Set start time of ${event.join_code} to ${suggestedDateTime.format('MMMM Do [@] HH:mm z')}`);
+
+      let fireteam = await client.db.fireteams.getByEventId(event.id);
+      if (fireteam.discord_id.split(',').length == 6) {
+        pinger.pingUsers(fireteam.discord_id.split(','), `${event.join_code} has now been scheduled for ${suggestedDateTime.format('MMMM Do [@] HH:mm z')}.`);
+      }
     } catch (err) {
       throw new Error(err);
     }
