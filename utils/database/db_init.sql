@@ -1,4 +1,18 @@
 --
+-- Table structure for table `zDBversion`
+--
+
+DROP TABLE IF EXISTS 'zDBversion';
+
+--no call for an id column here I think
+--also int display length seems like it will do nothing
+CREATE TABLE 'zDBversion' (
+  'name' varchar(64) NOT NULL,
+  'version' smallint NOT NULL,
+  PRIMARY KEY ('name')
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
 -- Table structure for table `activities`
 --
 
