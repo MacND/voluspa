@@ -25,7 +25,7 @@ module.exports = {
       }
 
       await client.db.fireteams.put(message.author.id, event.id, reserve);
-
+      
     } catch (err) {
       throw new Error(err);
     }

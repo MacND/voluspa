@@ -1,5 +1,4 @@
 let moment = require(__basedir + '/utils/moment.js');
-let pinger = require(__basedir + '/utils/pinger.js');
 
 module.exports = {
   run: async (client, message, args) => {
@@ -38,9 +37,8 @@ module.exports = {
       message.reply(`Set start time of ${event.join_code} to ${suggestedDateTime.format('MMMM Do [@] HH:mm z')}`);
 
       let fireteam = await client.db.fireteams.getByEventId(event.id);
-      if (fireteam.discord_id.split(',').length == 6) {
-        pinger.pingUsers(fireteam.discord_id.split(','), `${event.join_code} has now been scheduled for ${suggestedDateTime.format('MMMM Do [@] HH:mm z')}.`);
-      }
+      client.pinger.pingUsers(fireteam.discord_id.split(','), `${event.join_code} has now been scheduled for ${suggestedDateTime.format('MMMM Do [@] HH:mm z')}.`);
+
     } catch (err) {
       throw new Error(err);
     }
