@@ -1,4 +1,14 @@
 module.exports = pool => ({
+
+  getRequiredTableVersion: async () => {
+    try {
+      let version = 1;
+      return version;
+    } catch (err) {
+      throw new Error(err);
+    }
+  },
+  
   get: async () => {
     try {
       let [rows, fields] = await pool.query('SELECT name, version FROM zDBversion;');
@@ -7,7 +17,8 @@ module.exports = pool => ({
       throw new Error(err);
     }
   },
-    getVersionByName: async (name) => {
+
+  getCurrentVersionByName: async (name) => {
     try {
       let [rows, fields] = await pool.query('SELECT version FROM zDBversion WHERE name = :name;',
         {
@@ -17,7 +28,7 @@ module.exports = pool => ({
       if (rows.length > 0) {
         return rows[0].version;
       } else {
-        throw new Error('No version recorded for that table name. You can use confirmByName to check first if version info exists.');
+        throw new Error('No version recorded for that table name. You can use existsCurrentVersionByName to check first if version info exists.');
       }
       
     } catch (err) {
@@ -25,7 +36,7 @@ module.exports = pool => ({
     }
   },
 
-  confirmByName: async (name) => {
+  existsCurrentVersionByName: async (name) => {
     try {
       let [rows, fields] = await pool.query('SELECT version FROM zDBversion WHERE name = :name;',
         {
