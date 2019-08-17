@@ -9,6 +9,7 @@ const config = require(__basedir + '/config/discord.json');
 client.config = config;
 
 client.db = require(__basedir + '/utils/database/db.js');
+const pinger = require(__basedir + '/utils/pinger.js')(client);
 
 fs.readdir(__basedir + '/events/', (err, files) => {
   if (err) return console.error(err);

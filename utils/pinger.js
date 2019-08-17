@@ -13,9 +13,9 @@ let Timer = {
   cancel: key => {
     clearTimeout(Timer.map.get(key));
   }
-};
+}
 
-module.exports = client => ({
+module.exports = ({
   pingUsers: async (users, message) => {
     for (let i=0; i<users.length; i++) {
       client.fetchUser(users[i]).send(message);
