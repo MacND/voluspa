@@ -37,8 +37,8 @@ module.exports = pool => ({
 //                      WHERE tablename = ${tablename}
 //                    COMMIT`
 //
-//      let [rows, fields] = await pool.query('SELECT name, version FROM zDBversion;');
-//      return rows;
+//      let [rows, fields] = await pool.query(update);
+//      return true;
 //    } catch (err) {
 //      throw new Error(err);
 //    }

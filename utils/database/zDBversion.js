@@ -11,18 +11,18 @@ module.exports = pool => ({
   
   get: async () => {
     try {
-      let [rows, fields] = await pool.query('SELECT name, version FROM zDBversion;');
+      let [rows, fields] = await pool.query('SELECT tablename, version FROM zDBversion;');
       return rows;
     } catch (err) {
       throw new Error(err);
     }
   },
 
-  getCurrentVersionByName: async (name) => {
+  getCurrentVersionByName: async (tablename) => {
     try {
-      let [rows, fields] = await pool.query('SELECT version FROM zDBversion WHERE name = :name;',
+      let [rows, fields] = await pool.query('SELECT version FROM zDBversion WHERE tablename = :tablename;',
         {
-          name
+          tablename
         }
       );
       if (rows.length > 0) {
@@ -36,11 +36,28 @@ module.exports = pool => ({
     }
   },
 
-  existsCurrentVersionByName: async (name) => {
+  exists: async (tablename) => {
     try {
-      let [rows, fields] = await pool.query('SELECT version FROM zDBversion WHERE name = :name;',
+      let [rows, fields] = await pool.query('SELECT COUNT(tablename) AS matches FROM information_schema.tables WHERE table_name = :tablename;',
         {
-          name
+          tablename
+        }
+      );
+      if (rows[0].matches) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (err) {
+      throw new Error(err);
+    }
+  },
+
+  existsCurrentVersionByName: async (tablename) => {
+    try {
+      let [rows, fields] = await pool.query('SELECT version FROM zDBversion WHERE tablename = :tablename;',
+        {
+          tablename
         }
       );
       if (rows.length > 0) {
