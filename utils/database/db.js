@@ -5,11 +5,13 @@ let events = require(__basedir + '/utils/database/events.js')(pool);
 let activities = require(__basedir + '/utils/database/activities.js')(pool);
 let fireteams = require(__basedir + '/utils/database/fireteams.js')(pool);
 let zDBversion = require(__basedir + '/utils/database/zDBversion.js')(pool);
+let zDBversion_refresh = require(__basedir + '/utils/database/zDBversion_refresh.js')(pool);
 
 module.exports = {
   users,
   events,
   activities,
   fireteams,
-  zDBversion
+  zDBversion,
+  zDBversion_refresh
 };

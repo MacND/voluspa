@@ -5,7 +5,7 @@
 DROP TABLE IF EXISTS 'zDBversion';
 
 --no call for an id column here I think
---also int display length seems like it will do nothing
+--also int display length seems like it will do nothing unless also invoking zero fill?
 CREATE TABLE 'zDBversion' (
   'name' varchar(64) NOT NULL,
   'version' smallint NOT NULL,
