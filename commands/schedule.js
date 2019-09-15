@@ -1,4 +1,5 @@
-let moment = require(__basedir + '/utils/moment.js');
+const db = require(__basedir + '/utils/database/db.js');
+const moment = require(__basedir + '/utils/moment.js');
 
 module.exports = {
   run: async (client, message, args) => {
@@ -7,13 +8,13 @@ module.exports = {
         return message.reply('Please supply an event join code.');
       }
 
-      let event = await client.db.events.getByJoinCode(args[0]);
+      let event = await db.events.getByJoinCode(args[0]);
 
       if (!event) {
         return message.reply('Unable find an event with the supplied join code.');
       }
 
-      let eventAdmins = await client.db.fireteams.getAdminsByEventId(event.id);
+      let eventAdmins = await db.fireteams.getAdminsByEventId(event.id);
  
       if (!eventAdmins.discord_id.split(',').includes(message.author.id)) {
         return message.reply('You are not an admin for this event.');
@@ -23,7 +24,7 @@ module.exports = {
         return message.reply('Invalid day and time supplied.');
       }
 
-      let user = await client.db.users.getByDiscordId(message.author.id);
+      let user = await db.users.getByDiscordId(message.author.id);
 
       moment.tz.setDefault(user.timezone);
       let suggestedDateTime = moment.tz(moment(args[2], 'HH:mm').day(args[1]), user.timezone);
@@ -33,10 +34,10 @@ module.exports = {
         suggestedDateTime.add(7, 'd');
       }
 
-      await client.db.events.putStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.join_code);
+      await db.events.putStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.join_code);
       message.reply(`Set start time of ${event.join_code} to ${suggestedDateTime.format('MMMM Do [@] HH:mm z')}`);
 
-      let fireteam = await client.db.fireteams.getByEventId(event.id);
+      let fireteam = await db.fireteams.getByEventId(event.id);
       client.pinger.pingUsers(fireteam.discord_id.split(','), `${event.join_code} has now been scheduled for ${suggestedDateTime.format('MMMM Do [@] HH:mm z')}.`);
 
     } catch (err) {

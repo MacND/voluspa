@@ -1,3 +1,5 @@
+const db = require(__basedir + '/utils/database/db.js');
+
 module.exports = {
   run: async (client, message, args) => {
     try {
@@ -5,7 +7,7 @@ module.exports = {
         return message.reply('Please supply an event join code.');
       }
 
-      let event = await client.db.events.getByJoinCode(args[0]);
+      let event = await db.events.getByJoinCode(args[0]);
 
       if (!event) {
         return message.reply('Could not find an event with the supplied join code.');
@@ -21,8 +23,8 @@ module.exports = {
         return message.reply('You cannot kick yourself from an event.');
       }
     
-      let fireteam = await client.db.fireteams.getByEventId(event.id);
-      let fireteamAdmins = await client.db.fireteams.getAdminsByEventId(event.id);
+      let fireteam = await db.fireteams.getByEventId(event.id);
+      let fireteamAdmins = await db.fireteams.getAdminsByEventId(event.id);
 
       if (!fireteamAdmins.discord_id.split(',').includes(message.author.id)) {
         return message.reply('Only admins can kick people from events');
@@ -32,7 +34,7 @@ module.exports = {
         return message.reply('The user you are trying to kick is not a member of this event.');
       }
 
-      await client.db.fireteams.deleteMember(searchUserId, event.id);
+      await db.fireteams.deleteMember(searchUserId, event.id);
 
     } catch (err) {
       throw new Error(err);

@@ -1,3 +1,5 @@
+const db = require(__basedir + '/utils/database/db.js');
+
 module.exports = {
   run: async (client, message, args) => {
     try {
@@ -5,27 +7,27 @@ module.exports = {
         return message.reply('Please supply an event join code.');
       }
 
-      let event = await client.db.events.getByJoinCode(args[0]);
+      let event = await db.events.getByJoinCode(args[0]);
 
       if (!event) {
         return message.reply('Could not find an event with the supplied join code.');
       }
 
-      let user = await client.db.users.getByDiscordId(message.author.id);
+      let user = await db.users.getByDiscordId(message.author.id);
 
       if (!user) {
         return message.reply(`You are not registered - please use the ${client.config.prefix}register command and try again.`);
       }
 
-      let fireteam = await client.db.fireteams.getByEventId(event.id);
+      let fireteam = await db.fireteams.getByEventId(event.id);
       let reserve = (fireteam.discord_id.split(',').length >= 6) ? 1 : 0;
 
       if (fireteam.discord_id.split(',').indexOf(message.author.id) != -1) {
         return message.reply('You are already a member of this event.');
       }
 
-      await client.db.fireteams.put(message.author.id, event.id, reserve);
-      
+      await db.fireteams.put(message.author.id, event.id, reserve);
+      message.react('✅');
     } catch (err) {
       throw new Error(err);
     }

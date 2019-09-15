@@ -3,12 +3,12 @@ global.__basedir = __dirname;
 const Discord = require('discord.js');
 const Enmap = require('enmap');
 const fs = require('fs');
+const db = require(__basedir + '/utils/database/db.js');
 
 const client = new Discord.Client({ disableEveryone: true });
 const config = require(__basedir + '/config/discord.json');
 client.config = config;
 
-client.db = require(__basedir + '/utils/database/db.js');
 const pinger = require(__basedir + '/utils/pinger.js')(client);
 
 fs.readdir(__basedir + '/events/', (err, files) => {

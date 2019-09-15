@@ -1,3 +1,5 @@
+const db = require(__basedir + '/utils/database/db.js');
+
 module.exports = {
   run: async (client, message, args) => {
     try {
@@ -5,13 +7,13 @@ module.exports = {
         return message.reply('Please supply an event join code.');
       }
 
-      let event = await client.db.events.getByJoinCode(args[0]);
+      let event = await db.events.getByJoinCode(args[0]);
 
       if (!event) {
         return message.reply('Could not find an event with the supplied join code.');
       }
 
-      let fireteam = await client.db.fireteams.getByEventId(event.id); 
+      let fireteam = await db.fireteams.getByEventId(event.id); 
       let messageString = '';
       for (let i = 0, len = fireteam.discord_id.split(',').length; i< len; i++) {
         let member = fireteam.discord_id.split(',')[i];

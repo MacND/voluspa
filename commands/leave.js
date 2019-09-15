@@ -1,3 +1,5 @@
+const db = require(__basedir + '/utils/database/db.js');
+
 module.exports = {
   run: async (client, message, args) => {
     try {
@@ -5,19 +7,19 @@ module.exports = {
         return message.reply('Please supply an event join code.');
       }
 
-      let event = await client.db.events.getByJoinCode(args[0]);
+      let event = await db.events.getByJoinCode(args[0]);
 
       if (!event) {
         return message.reply('Could not find an event with the supplied join code.');
       }
 
-      let nextAdmin = await client.db.fireteams.getNextAdmin(event.id, message.author.id);
+      let nextAdmin = await db.fireteams.getNextAdmin(event.id, message.author.id);
     
       if (!nextAdmin) {
         return message.reply('Unable to leave event as you are the only admin - give another fireteam member admin rights or cancel the event.');
       }
     
-      await client.db.fireteams.deleteMember(message.author.id, event.id);
+      await db.fireteams.deleteMember(message.author.id, event.id);
 
     } catch (err) {
       throw new Error(err);

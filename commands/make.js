@@ -1,4 +1,5 @@
-let moment = require(__basedir + '/utils/moment.js');
+const moment = require(__basedir + '/utils/moment.js');
+const db = require(__basedir + '/utils/database/db.js');
 
 module.exports = {
   run: async (client, message, args) => {
@@ -8,7 +9,7 @@ module.exports = {
         return;
       }
 
-      let activity = await client.db.activities.getByNickname(args[0]);
+      let activity = await db.activities.getByNickname(args[0]);
 
       if (!activity) {
         message.reply(`Unable to find an activity with nickname ${args[0]}.`);
@@ -18,7 +19,7 @@ module.exports = {
       
       args.includes('-private') ? private = 1 : private = 0;
 
-      let res = await client.db.events.post(message.author.id, activity.id, moment.utc().format('YYYY-MM-DD HH:mm:ss'), private);
+      let res = await db.events.post(message.author.id, activity.id, moment.utc().format('YYYY-MM-DD HH:mm:ss'), private);
       message.reply(`Created event with join code \`${res[5][0].join_code}\`.`);
 
     } catch (err) {

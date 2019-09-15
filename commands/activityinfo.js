@@ -1,16 +1,17 @@
 const Discord = require('discord.js');
 const moment = require(`${__basedir}/utils/moment.js`);
+const db = require(__basedir + '/utils/database/db.js');
 
 module.exports = {
   run: async (client, message, args) => {
     try {
       if (!args[0]) {
-        let activities = await client.db.activities.get();
+        let activities = await db.activities.get();
         message.channel.send(`Available activities: ${activities.map(elem => elem.nickname).join(', ')}.`);
         return;
       }
 
-      let activity = await client.db.activities.getByNickname(args[0].toLowerCase());
+      let activity = await db.activities.getByNickname(args[0].toLowerCase());
 
       if (!activity) {
         message.channel.send(`Couldn't find an activity with nickname ${args[0]}`);

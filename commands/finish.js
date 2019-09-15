@@ -1,4 +1,5 @@
-let moment = require(__basedir + '/utils/moment.js');
+const moment = require(__basedir + '/utils/moment.js');
+const db = require(__basedir + '/utils/database/db.js');
 
 module.exports = {
   run: async (client, message, args) => {
@@ -7,12 +8,12 @@ module.exports = {
         return message.reply('Please supply an event join code.');
       }
 
-      let event = await client.db.events.getByJoinCode(args[0]);
+      let event = await db.events.getByJoinCode(args[0]);
 
       if (!event) {
         return message.reply('Could not find an event with the supplied join code.');
       }
-      let eventAdmins = await client.db.fireteams.getAdminsByEventId(event.id);
+      let eventAdmins = await db.fireteams.getAdminsByEventId(event.id);
  
       if (!eventAdmins.discord_id.split(',').includes(message.author.id)) {
         return message.reply('You are not an admin for this event.');
@@ -24,7 +25,8 @@ module.exports = {
 
       let finishTime = moment.utc().format('YYYY-MM-DD HH:mm');
       
-      await client.db.events.putFinishTime(finishTime, event.id);
+      await db.events.putFinishTime(finishTime, event.id);
+      message.react('✅');
     } catch (err) {
       throw new Error(err);
     }

@@ -1,10 +1,11 @@
-let moment = require(__basedir + '/utils/moment.js');
+const db = require(__basedir + '/utils/database/db.js');
+const moment = require(__basedir + '/utils/moment.js');
 
 module.exports = {
   run: async (client, message, args) => {
     try {
-      let user = await client.db.users.getByDiscordId(message.author.id);
-      let events = await client.db.events.getNext();
+      let user = await db.users.getByDiscordId(message.author.id);
+      let events = await db.events.getNext();
       let messageString = '';
 
       for (let i = 0; i < events.length; i++) {

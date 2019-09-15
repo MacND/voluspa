@@ -1,3 +1,5 @@
+const db = require(__basedir + '/utils/database/db.js');
+
 module.exports = {
   run: async (client, message, args) => {
     try {
@@ -12,7 +14,7 @@ module.exports = {
       }
 
       let twitch = args[0];
-      let user = client.db.users.getByDiscordId(message.author.id);
+      let user = db.users.getByDiscordId(message.author.id);
 
       if (!user) {
         message.channel.send('Unable to find user - have you registered?');
@@ -24,7 +26,8 @@ module.exports = {
         return;
       }
 
-      await client.db.users.putTwitch(message.author.id, twitch);
+      await db.users.putTwitch(message.author.id, twitch);
+      message.react('✅');
     } catch (err) {
       throw new Error(err);
     }
