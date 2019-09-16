@@ -13,7 +13,7 @@ module.exports = {
         return message.reply('Could not find an event with the supplied join code.');
       }
 
-      let fireteam = await db.fireteams.getByEventId(event.id); 
+      let fireteam = await db.fireteams.getByEventId(event.id);
       let messageString = '';
       for (let i = 0, len = fireteam.discord_id.split(',').length; i< len; i++) {
         let member = fireteam.discord_id.split(',')[i];

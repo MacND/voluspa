@@ -18,14 +18,14 @@ let Timer = {
 module.exports = client => ({
   pingUsers: async (users, message) => {
     for (let i=0; i<users.length; i++) {
-      client.fetchUser(users[i]).send(message);
+      client.users.get(users[i]).send(message);
     }
   },
 
   pingUsersBeforeEvent: async (users, message, date, eventName) => {
     Timer.set(eventName, () => {
       for (let i=0; i<users.length; i++) {
-        client.fetchUser(users[i]).send(message);
+        client.users.get(users[i]).send(message);
       }
     }, date.clone().subtract(15, 'minutes').toDate());
   }

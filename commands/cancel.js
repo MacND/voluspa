@@ -2,6 +2,7 @@ const db = require(__basedir + '/utils/database/db.js');
 
 module.exports = {
   run: async (client, message, args) => {
+    const notify = require(__basedir + '/utils/notify.js')(client);
     try {
       if (!args[0]) {
         return message.reply('Please supply an event join code.');
@@ -13,6 +14,7 @@ module.exports = {
         return message.reply('Could not find an event with the supplied join code.');
       }
 
+      let fireteam = await db.fireteams.getByEventId(event.id);
       let fireteamAdmins = await db.fireteams.getAdminsByEventId(event.id);
 
       if (!fireteamAdmins.discord_id.split(',').includes(message.author.id)) {
@@ -21,7 +23,8 @@ module.exports = {
 
       await db.events.delete(event.id);
       await db.fireteams.delete(event.id);
-    
+      //message.reply(`Users in event when cancelled: ${fireteam.discord_id.split(',')}`);
+      await notify.pingUsers(fireteam.discord_id.split(','), `The event ${event.join_code} has been cancelled.`);
     } catch (err) {
       throw new Error(err);
     }

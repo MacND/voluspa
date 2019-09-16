@@ -3,6 +3,7 @@ const moment = require(__basedir + '/utils/moment.js');
 
 module.exports = {
   run: async (client, message, args) => {
+    const notify = require(__basedir + '/utils/notify.js')(client);
     try {
       if (!args[0]) {
         return message.reply('Please supply an event join code.');
@@ -20,30 +21,27 @@ module.exports = {
         return message.reply('You are not an admin for this event.');
       }
 
-      if (!args[1] && !args[2]) {
-        return message.reply('Invalid day and time supplied.');
+      let suggestion = args.slice(1).join(' ');
+
+      if (!suggestion) {
+        return message.reply('No start time supplied.');
       }
 
       let user = await db.users.getByDiscordId(message.author.id);
-
-      moment.tz.setDefault(user.timezone);
-      let suggestedDateTime = moment.tz(moment(args[2], 'HH:mm').day(args[1]), user.timezone);
-      moment.tz.setDefault();
+      let suggestedDateTime = moment.tz(moment(suggestion, ['MMM DD HH:mm', 'MMM DD h:mma', 'dddd HH:mm', 'dddd h:mma',  'HH:mm', 'h:mma', 'ha']), user.timezone);
 
       if (suggestedDateTime < moment().tz(user.timezone)) {
         suggestedDateTime.add(7, 'd');
       }
 
       await db.events.putStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.join_code);
-      message.reply(`Set start time of ${event.join_code} to ${suggestedDateTime.format('MMMM Do [@] HH:mm z')}`);
-
       let fireteam = await db.fireteams.getByEventId(event.id);
-      client.pinger.pingUsers(fireteam.discord_id.split(','), `${event.join_code} has now been scheduled for ${suggestedDateTime.format('MMMM Do [@] HH:mm z')}.`);
+      notify.pingUsers(fireteam.discord_id.split(','), `${event.join_code} has now been scheduled for ${suggestedDateTime.utc().format('MMMM Do [@] HH:mm z')}.`);
 
     } catch (err) {
       throw new Error(err);
     }
   },
 
-  help: 'Set a start time for an event.  Specifiy a join code, day (Monday-Sunday) and a time (24hr format), e.g. `Monday 18:00`.'
+  help: 'Set a start time for an event.  Specifiy a join code, and a start time in one of the following formats: ```\nJanuary 1 12:00\nJanuary 1 12:00pm\nMonday 12:00\nMonday 12:00pm\n12:00\n12:00pm```'
 };
