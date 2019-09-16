@@ -23,8 +23,7 @@ module.exports = {
 
       await db.events.delete(event.id);
       await db.fireteams.delete(event.id);
-      //message.reply(`Users in event when cancelled: ${fireteam.discord_id.split(',')}`);
-      await notify.pingUsers(fireteam.discord_id.split(','), `The event ${event.join_code} has been cancelled.`);
+      notify.pingUsers(fireteam.discord_id.split(','), `The event ${event.join_code} has been cancelled.`);
     } catch (err) {
       throw new Error(err);
     }
