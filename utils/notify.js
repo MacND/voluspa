@@ -22,11 +22,15 @@ module.exports = client => ({
     }
   },
 
-  pingUsersBeforeEvent: async (users, message, date, eventName) => {
-    Timer.set(eventName, () => {
+  pingUsersBeforeEvent: async (users, message, date, join_code) => {
+    Timer.set(join_code, () => {
       for (let i=0; i<users.length; i++) {
         client.users.get(users[i]).send(message);
       }
-    }, date.clone().subtract(15, 'minutes').toDate());
+    }, date.clone().subtract(10, 'minutes').toDate());
+  },
+
+  cancelTimer: async (join_code) => {
+    Timer.cancel(join_code);
   }
 });
