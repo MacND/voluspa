@@ -14,7 +14,7 @@ module.exports = {
       }
 
       let twitch = args[0];
-      let user = db.users.getByDiscordId(message.author.id);
+      let user = await db.users.getByDiscordId(message.author.id);
 
       if (!user) {
         message.channel.send('Unable to find user - have you registered?');
