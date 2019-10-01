@@ -1,7 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const btoa = require('btoa');
-const config = require('../config/discord.json');
+const config = require(__basedir + '/config/discord.json');
 
 const router = express.Router();
 const redirect = encodeURIComponent(config.redirect_uri);
