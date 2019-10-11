@@ -27,6 +27,9 @@ module.exports = {
       }
 
       await db.fireteams.put(message.author.id, event.id, reserve);
+      if (reserve) { 
+        message.author.send('You have been added to the waitlist for this raid as it is currently full.');
+      }
       message.react('✅');
     } catch (err) {
       throw new Error(err);
