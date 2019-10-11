@@ -3,7 +3,8 @@ const moment = require(__basedir + '/utils/moment.js');
 
 module.exports = async client => {
   console.log('Successfully connected to Discord, setting up event timers...');
-
+  const notify = require(__basedir + '/utils/notify.js')(client);
+  
   try {
     let events = await db.events.getNext();
     
