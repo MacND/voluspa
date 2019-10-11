@@ -2,28 +2,28 @@ const db = require(__basedir + '/utils/database/db.js');
 
 module.exports = {
   run: async (client, message, args) => {
-  try {
-    if (!args[0]) {
-      return message.reply('Please supply an event join code.');
-    }
+    try {
+      if (!args[0]) {
+        return message.reply('Please supply an event join code.');
+      }
 
-    let event = await db.events.getByJoinCode(args[0]);
+      let event = await db.events.getByJoinCode(args[0]);
 
-    if (!event) {
-      return message.reply('Unable find an event with the supplied join code.');
-    }
+      if (!event) {
+        return message.reply('Unable find an event with the supplied join code.');
+      }
 
-    let eventAdmins = await db.fireteams.getAdminsByEventId(event.id);
+      let eventAdmins = await db.fireteams.getAdminsByEventId(event.id);
 
-    if (!eventAdmins.discord_id.split(',').includes(message.author.id)) {
-      return message.reply('You are not an admin for this event.');
-    }
+      if (!eventAdmins.discord_id.split(',').includes(message.author.id)) {
+        return message.reply('You are not an admin for this event.');
+      }
 
-    let note = args.slice(1).join(' ');
+      let note = args.slice(1).join(' ');
 
-    await db.events.putNote(note, event.id);
-    message.react('✅');
-  } catch (err) {
+      await db.events.putNote(note, event.id);
+      message.react('✅');
+    } catch (err) {
       throw new Error(err);
     }
   },
