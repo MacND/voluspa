@@ -1,25 +1,27 @@
 {
   "name": "the-oracle-engine",
-  "version": "1.0.0",
-  "description": "A Discord.js bot to help with arranging raids and get D2 character stats inside Discord.",
+  "version": "0.1.0",
+  "description": "A Discord.js bot to help arrange Destiny 2 activities.",
   "main": "bot.js",
   "dependencies": {
     "availability-schedule": "^1.0.2",
-    "discord.js": "^11.4.2",
-    "forever": "^0.15.3",
-    "googleapis": "^35.0.0",
-    "moment": "^2.22.2",
-    "moment-duration-format": "^2.2.2",
-    "moment-timezone": "^0.5.21",
-    "mysql2": "^1.6.4",
-    "request": "^2.81.0"
+    "btoa": "^1.2.1",
+    "discord.js": "^11.5.1",
+    "enmap": "^4.8.7",
+    "express": "^4.17.1",
+    "forever": "^1.0.0",
+    "moment": "^2.24.0",
+    "moment-duration-format": "^2.3.2",
+    "moment-timezone": "^0.5.25",
+    "mysql2": "^1.6.5",
+    "node-fetch": "^2.6.0",
+    "request": "^2.88.0"
   },
   "devDependencies": {
-    "eslint": "^5.12.0"
+    "eslint": "^5.16.0"
   },
   "scripts": {
-    "lint": "eslint bot.js db/db.js google/google.js",
-    "pretest": "npm run lint",
+    "pretest": "eslint . --fix",
     "test": "echo \"No tests\""
   },
   "keywords": [],
