@@ -31,14 +31,10 @@ module.exports = {
       let suggestedDateTime = moment(suggestion, ['MMM DD HH:mm', 'MMM DD h:mma', 'dddd HH:mm', 'dddd h:mma',  'HH:mm', 'h:mma', 'ha']);
       let offset = moment.tz(suggestedDateTime, user.timezone).utcOffset();
       suggestedDateTime.utcOffset(offset, true);
+      
       if (suggestedDateTime < moment().tz(user.timezone)) {
         suggestedDateTime.add(7, 'd');
       }
-
-      console.log(`Suggested time: ${suggestion}`)
-      console.log(`Converted time: ${suggestedDateTime}`);
-      console.log(`Offset: ${offset}`);
-      console.log(`Final time: ${suggestedDateTime}`);
 
       await db.events.putStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.id);
       let fireteam = await db.fireteams.getByEventId(event.id);

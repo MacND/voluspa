@@ -1,3 +1,18 @@
+const db = require(__basedir + '/utils/database/db.js');
+const moment = require(__basedir + '/utils/moment.js');
+
 module.exports = async client => {
-  console.log('Successfully connected to Discord');
+  console.log('Successfully connected to Discord, setting up event timers...');
+
+  try {
+    let events = await db.events.getNext();
+    
+    for (let i = 0; i < events.length; i++) {
+      let event = events[i];
+      let fireteam = await db.fireteams.getByEventId(event.id);
+      notify.pingUsersBeforeEvent(fireteam.discord_id.split(','), `In 10 minutes you are scheduled to take part in **${event.join_code}**.  Please proceed to orbit and join up with your fireteam.`, suggestedDateTime.utc(), event.join_code);
+    }
+  } catch (err) {
+    throw new Error(err);
+  }
 };
