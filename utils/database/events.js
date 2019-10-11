@@ -106,6 +106,23 @@ module.exports = pool => ({
     }
   },
 
+  putNote: async (note, eventId) => {
+    try {
+      let [
+        rows,
+        fields
+      ] = await pool.query(
+        'UPDATE events SET note = :note WHERE id = :eventId',
+        {
+          note,
+          eventId
+        }
+      );
+    } catch (err) {
+      throw new Error(err);
+    }
+  },
+
   delete: async (eventId) => {
     try {
       let [rows, fields] = await pool.query('DELETE FROM events WHERE id = :eventId;',

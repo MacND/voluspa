@@ -10,7 +10,7 @@ module.exports = {
 
       for (let i = 0; i < events.length; i++) {
         let event = events[i];
-        messageString += `**${event.join_code}** (${event.name})\n\`\`\`• Starting: ${(event.start_time ? `${moment(event.start_time).tz((user ? user.timezone : 'UTC')).format('MMMM Do [@] HH:mm z')}` : 'Not Set')}\n• Fireteam: ${event.fireteam.split(',').length}/6 ${event.private ? '🔒' : ''}\`\`\`\n`;
+        messageString += `**${event.join_code}** (${event.name})\n\`\`\`• Starting: ${(event.start_time ? `${moment(event.start_time).tz((user ? user.timezone : 'UTC')).format('MMMM Do [@] HH:mm z')}` : 'Not Set')}\n• Fireteam: ${event.fireteam.split(',').length}/6 ${event.private ? '🔒' : ''} ${event.note ? `\n• Note: ${event.note}`:''}\`\`\`\n`;
       }
 
       message.channel.send((messageString ? `Upcoming events:\n${messageString.trim()}` : 'No events scheduled.'));
