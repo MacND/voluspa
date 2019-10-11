@@ -39,8 +39,8 @@ app.get('/', (req, res) => {
   res.status(200).sendFile(__basedir + '/utils/auth/index.html');
 });
 
-app.listen(443, () => {
-  console.info('Running on port 443');
+app.listen(8443, () => {
+  console.info('Running on port 8443');
 });
 
 // Routes
