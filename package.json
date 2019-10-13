@@ -4,17 +4,20 @@
   "description": "A Discord.js bot to help arrange Destiny 2 activities.",
   "main": "bot.js",
   "dependencies": {
+    "@discordjs/uws": "^10.149.0",
     "availability-schedule": "^1.0.2",
     "btoa": "^1.2.1",
     "discord.js": "^11.5.1",
     "enmap": "^4.8.7",
     "express": "^4.17.1",
+    "ffmpeg-binaries": "^4.0.0",
     "forever": "^1.0.0",
     "moment": "^2.24.0",
     "moment-duration-format": "^2.3.2",
-    "moment-timezone": "^0.5.25",
-    "mysql2": "^1.6.5",
+    "moment-timezone": "^0.5.26",
+    "mysql2": "^1.7.0",
     "node-fetch": "^2.6.0",
+    "node-opus": "^0.3.2",
     "request": "^2.88.0"
   },
   "devDependencies": {
