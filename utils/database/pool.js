@@ -8,7 +8,8 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   multipleStatements: true,
-  namedPlaceholders: true
+  namedPlaceholders: true,
+  timezone: 'Z'
 }).promise();
 
 console.log('Database pool created and connected');
