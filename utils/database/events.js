@@ -34,9 +34,13 @@ module.exports = pool => ({
     }
   },
 
-  getNext: async () => {
+  getNext: async (filter='%') => {
     try {
-      let [rows, fields] = await pool.query('SELECT * FROM vw_next_3_events;');
+      let [rows, fields] = await pool.query('SELECT * FROM vw_next_3_events WHERE fireteam LIKE :filter;',
+        {
+          filter
+        }
+      );
       return rows;
     } catch (err) {
       throw new Error(err);

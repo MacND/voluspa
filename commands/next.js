@@ -5,8 +5,14 @@ module.exports = {
   run: async (client, message, args) => {
     try {
       let user = await db.users.getByDiscordId(message.author.id);
-      let events = await db.events.getNext();
       let messageString = '';
+      let filter;
+
+      if (args[0]) {
+        filter = `%${client.users.find(user => user.username.toLowerCase() === args[0].toLowerCase()).id}%`;
+      }
+
+      let events = await db.events.getNext(filter);
 
       for (let i = 0; i < events.length; i++) {
         let event = events[i];
@@ -19,5 +25,5 @@ module.exports = {
     }
   },
 
-  help: 'Show the next 3 events.'
+  help: 'Show the next 3 events.  You can include a Discord username as an argument to view events that user has joined.'
 };
