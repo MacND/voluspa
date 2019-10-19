@@ -30,6 +30,12 @@ fs.readdir(__basedir + '/commands/', (err, files) => {
     let commandName = file.split('.')[0];
     console.log(`Attempting to load command ${commandName}`);
     client.commands.set(commandName, props);
+    if (props.aliases) {
+      props.aliases.forEach(alias => {
+        client.commands.set(alias, props);
+        console.log(`-- Assigning alias ${alias} to ${commandName}`);
+      });
+    }
   });
 });
 
