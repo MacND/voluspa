@@ -19,10 +19,12 @@ module.exports = {
       }
       
       await db.events.putRaidReport(args[1], event.id);
+      message.react('✅');
     } catch (err) {
       throw new Error(err);
     }
   },
 
-  help: 'Associate a raid report URL with an event.'
+  help: 'Associate a raid report URL with an event.',
+  aliases: ['raidreport']
 };
