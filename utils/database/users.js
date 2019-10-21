@@ -78,5 +78,21 @@ module.exports = pool => ({
     } catch (err) {
       throw new Error(err);
     }
-  }
+  },
+
+  putOAuth: async (discordId, accessToken, refreshToken) => {
+    try {
+      let [rows, fields] = await pool.query(
+        'UPDATE users SET discord_access_token = :accessToken, discord_refresh_token = : refreshToken WHERE discord_id = :discordId',
+        {
+          discordId,
+          accessToken,
+          refreshToken
+        }
+      );
+      return rows;
+    } catch (err) {
+      throw new Error(err);
+    }
+  },
 });

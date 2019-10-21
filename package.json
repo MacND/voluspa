@@ -6,6 +6,7 @@
   "dependencies": {
     "@discordjs/uws": "^10.149.0",
     "availability-schedule": "^1.0.2",
+    "axios": "^0.19.0",
     "btoa": "^1.2.1",
     "discord.js": "github:discordjs/discord.js",
     "enmap": "^4.8.7",

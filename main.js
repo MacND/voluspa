@@ -3,9 +3,7 @@ global.__basedir = __dirname;
 const Discord = require('discord.js');
 const Enmap = require('enmap');
 const fs = require('fs');
-const express = require('express');
-const path = require('path');
-const app = express();
+const server = require(__basedir + '/utils/web/server.js');
 
 const client = new Discord.Client({ disableEveryone: true });
 const config = require(__basedir + '/config/discord.json');
@@ -37,34 +35,6 @@ fs.readdir(__basedir + '/commands/', (err, files) => {
       });
     }
   });
-});
-
-app.use('/static', express.static(path.join(__dirname, 'static')));
-
-app.get('/', (req, res) => {
-  res.status(200).sendFile(__basedir + '/utils/auth/index.html');
-});
-
-app.listen(8443, () => {
-  console.info('Running on port 8443');
-});
-
-// Routes
-app.use('/discord', require('./utils/auth/discord'));
-
-app.use((err, req, res, next) => {
-  switch (err.message) {
-  case 'NoCodeProvided':
-    return res.status(400).send({
-      status: 'ERROR',
-      error: err.message,
-    });
-  default:
-    return res.status(500).send({
-      status: 'ERROR',
-      error: err.message,
-    });
-  }
 });
 
 client.login(config.token);
