@@ -20,7 +20,7 @@ module.exports = {
       }
     
       await db.fireteams.deleteMember(message.author.id, event.id);
-
+      message.react('✅');
     } catch (err) {
       throw new Error(err);
     }
