@@ -9,11 +9,15 @@ let Timer = {
     }
     Timer.cancel(key);
     Timer.map.set(key, setTimeout(func, time));
+    console.log(`Setting new timer for ${key} in ${time}ms`);
   },
   cancel: key => {
     clearTimeout(Timer.map.get(key));
+    console.log(`Cancelling timer for ${key}`);
   }
 };
+
+const moment = require(__basedir + '/utils/moment.js');
 
 module.exports = client => ({
   pingUsers: async (users, message) => {
@@ -27,7 +31,7 @@ module.exports = client => ({
       for (let i=0; i<users.length; i++) {
         client.users.get(users[i]).send(message);
       }
-    }, date.clone().subtract(10, 'minutes').toDate());
+    }, moment(date).clone().subtract(10, 'minutes').toDate());
   },
 
   cancelTimer: async (join_code) => {
