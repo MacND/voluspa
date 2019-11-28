@@ -6,10 +6,12 @@ module.exports = {
     try {
       let user = await db.users.getByDiscordId(message.author.id);
       let messageString = '';
+      let filterUser;
       let filter;
 
       if (args[0]) {
-        filter = `%${client.users.find(user => user.username.toLowerCase() === args[0].toLowerCase()).id}%`;
+        filterUser = client.users.find(user => user.username.toLowerCase() === args[0].toLowerCase());
+        filter = `%${filterUser.id}%`;
       }
 
       let events = await db.events.getNext(filter);
@@ -19,7 +21,7 @@ module.exports = {
         messageString += `**${event.join_code}** (${event.name})\n\`\`\`• Starting: ${(event.start_time ? `${moment(event.start_time).tz((user ? user.timezone : 'UTC')).format('MMMM Do [@] HH:mm z')}` : 'Not Set')}\n• Fireteam: ${event.fireteam.split(',').length}/6 ${event.private ? '🔒' : ''} ${event.note ? `\n• Note: ${event.note}`:''}\`\`\`\n`;
       }
 
-      message.channel.send((messageString ? `Upcoming events:\n${messageString.trim()}` : 'No events scheduled.'));
+      message.channel.send((messageString ? `Upcoming events${(filterUser ? ` for ${filterUser.username}`:``)}:\n${messageString.trim()}` : 'No events scheduled.'));
     } catch (err) {
       throw new Error(err);
     }
