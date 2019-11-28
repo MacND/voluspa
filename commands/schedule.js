@@ -36,6 +36,8 @@ module.exports = {
         suggestedDateTime.add(7, 'd');
       }
 
+      console.log(suggestedDateTime.utc().format());
+
       await db.events.putStartTime(suggestedDateTime.utc().format('YYYY-MM-DD HH:mm'), event.id);
       let fireteam = await db.fireteams.getByEventId(event.id);
       notify.pingUsers(fireteam.discord_id.split(','), `${event.join_code} has now been scheduled for ${suggestedDateTime.utc().format('MMMM Do [@] HH:mm z')}.`);
