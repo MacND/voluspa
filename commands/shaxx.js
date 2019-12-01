@@ -21,6 +21,7 @@ module.exports = {
         message.member.voice.channel.leave();
       });
 
+      message.react('✅');
     } catch (err) {
       message.member.voice.channel.leave();
       throw new Error(err);

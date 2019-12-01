@@ -11,6 +11,9 @@ module.exports = {
 
       if (args[0]) {
         filterUser = client.users.find(user => user.username.toLowerCase() === args[0].toLowerCase());
+        if (!filterUser) {
+          return message.reply(`Couldn't find user ${args[0]}.`);
+        }
         filter = `%${filterUser.id}%`;
       }
 
