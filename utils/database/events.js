@@ -98,7 +98,7 @@ module.exports = pool => ({
         rows,
         fields
       ] = await pool.query(
-        'UPDATE events SET raidReportUrl = :rrLink WHERE id = :eventId',
+        'UPDATE events SET raid_report_url = :rrLink WHERE id = :eventId',
         {
           rrLink,
           eventId
