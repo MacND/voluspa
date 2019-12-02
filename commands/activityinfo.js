@@ -1,5 +1,4 @@
 const Discord = require('discord.js');
-const moment = require(`${__basedir}/utils/moment.js`);
 const db = require(__basedir + '/utils/database/db.js');
 
 module.exports = {
@@ -18,11 +17,12 @@ module.exports = {
         return;
       }
 
-      let embed = new Discord.RichEmbed().
+      let embed = new Discord.MessageEmbed().
         setTitle(`${activity.name}`).
         setColor(5517157).
         setDescription(activity.tagline).
-        setThumbnail(`https://gamezone.cool/img/${activity.nickname}.png`).
+        attachFiles([__basedir + `/img/${activity.nickname}.png`]).
+        setThumbnail(`attachment://${activity.nickname}.png`).
         setFooter(`Gather your Fireteam - !make ${activity.nickname}`);
 
       message.channel.send(embed);
