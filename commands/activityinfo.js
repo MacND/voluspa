@@ -20,10 +20,10 @@ module.exports = {
       let embed = new Discord.MessageEmbed().
         setTitle(activity.name).
         setColor(5517157).
-        setDescription(`${activity.tagline}\nThis activity has a maximum fireteam of ${activity.fireteam_size} Guardians.  Requires ${activity.requires}.`).
+        setDescription(`${activity.tagline}\n\nThis activity has a maximum fireteam of ${activity.fireteam_size} Guardians.`).
         attachFiles([__basedir + `/img/${activity.nickname}.png`]).
         setThumbnail(`attachment://${activity.nickname}.png`).
-        setFooter(`Gather your Fireteam - !make ${activity.nickname}`);
+        setFooter(`Requires Destiny 2: ${activity.requires}.`);
 
       message.channel.send(embed);
     } catch (err) {
