@@ -21,7 +21,7 @@ module.exports = {
 
       for (let i = 0; i < events.length; i++) {
         let event = events[i];
-        messageString += `**${event.join_code}**: \`${(Math.floor(Math.random() * 2) == 0)? '👨‍🚀' : '👩‍🚀'} ${event.fireteam.split(',').length}/6 - ${(event.start_time ? `${moment(event.start_time).tz((user ? user.timezone : 'UTC')).format('MMM Do [@] HH:mm z')}` : 'Not scheduled')} - ${event.fireteam.split(',').includes(message.author.id) ? 'Joined' : ''} ${event.private ? '🔒' : ''}\`${event.note ? `\n • \`${event.note}\``:''}\n`;
+        messageString += `**${event.join_code}**: \`${event.fireteam.split(',').length}/6 - ${(event.start_time ? `${moment(event.start_time).tz((user ? user.timezone : 'UTC')).format('MMM Do [@] HH:mm z')}` : 'Not scheduled')}${event.fireteam.split(',').includes(message.author.id) ? ' - Joined' : ''}${event.private ? ' - 🔒' : ''}\`${event.note ? `\n • \`${event.note}\``:''}\n`;
       }
 
       message.channel.send((messageString ? `Upcoming events${(filterUser ? ` for ${filterUser.username}`:``)}:\n${messageString.trim()}` : 'No events scheduled.'));
