@@ -16,7 +16,6 @@ module.exports = {
       let fireteam = await db.fireteams.getByEventId(event.id);
       fireteam = fireteam.discord_id.split(',');
       let fireteamNames = [];
-      let messageString = ''
 
       for (let i = 0, len = fireteam.length; i< len; i++) {
         let member = fireteam[i];
