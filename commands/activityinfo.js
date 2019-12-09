@@ -18,9 +18,9 @@ module.exports = {
       }
 
       let embed = new Discord.MessageEmbed().
-        setTitle(`${activity.name}`).
+        setTitle(activity.name).
         setColor(5517157).
-        setDescription(activity.tagline).
+        setDescription(`${activity.tagline}\nThis activity has a maximum fireteam of ${activity.fireteam_size} Guardians.  Requires ${activity.requires}.`).
         attachFiles([__basedir + `/img/${activity.nickname}.png`]).
         setThumbnail(`attachment://${activity.nickname}.png`).
         setFooter(`Gather your Fireteam - !make ${activity.nickname}`);
