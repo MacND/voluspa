@@ -14,13 +14,16 @@ module.exports = {
       }
 
       let fireteam = await db.fireteams.getByEventId(event.id);
-      let messageString = '';
-      for (let i = 0, len = fireteam.discord_id.split(',').length; i< len; i++) {
-        let member = fireteam.discord_id.split(',')[i];
-        messageString += `${client.users.get(member).username}\n`;
+      fireteam = fireteam.discord_id.split(',');
+      let fireteamNames = [];
+      let messageString = ''
+
+      for (let i = 0, len = fireteam.length; i< len; i++) {
+        let member = fireteam[i];
+        fireteamNames.push(client.users.get(member).username);
       }
 
-      message.reply(`Fireteam for ${event.join_code}:\n\`\`\`\n${messageString}\`\`\``);
+      message.reply(`Fireteam for ${event.join_code}:\n${fireteamNames.sort().join(', ')}`);
 
     } catch (err) {
       throw new Error(err);
