@@ -3,7 +3,7 @@ global.__basedir = __dirname;
 const Discord = require('discord.js');
 const Enmap = require('enmap');
 const fs = require('fs');
-const server = require(__basedir + '/utils/web/server.js');
+const srv = require(__basedir + '/utils/web/srv.js');
 
 const client = new Discord.Client({ disableEveryone: true });
 const config = require(__basedir + '/config/discord.json');
