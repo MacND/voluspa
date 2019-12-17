@@ -44,6 +44,4 @@ fastify.get('/login/discord/callback', async function (request, reply) {
   // const newToken = await this.getNewAccessTokenUsingRefreshToken(token.refresh_token)
 
   reply.send({ access_token: token.access_token })
-})
-
-// https://discordapp.com/api/oauth2/authorize?client_id=540182175778078723&redirect_uri=https%3A%2F%2Fdev.voluspa.app%2Foauth%2Fdiscord&response_type=code&scope=identify
+});
