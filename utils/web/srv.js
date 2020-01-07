@@ -1,7 +1,7 @@
 const fastify = require('fastify')();
 const oauthPlugin = require('fastify-oauth2')
 const config = require(__basedir + '/config/discord.json');
-const db = require(__basedir + '/utils/database/db.js');
+// const db = require(__basedir + '/utils/database/db.js');
 const path = require('path');
 
 fastify.register(require('fastify-static'), {
@@ -17,7 +17,7 @@ fastify.get('/', async (req, res) => {
 });
 
 fastify.register(oauthPlugin, {
-  name: 'discord',
+  name: 'discordOauth',
   scope: ['identify'],
   credentials: {
     client: {
@@ -36,12 +36,11 @@ fastify.register(oauthPlugin, {
 });
 
 fastify.get('/login/discord/callback', async function (request, reply) {
-  const token = await this.discord.getAccessTokenFromAuthorizationCodeFlow(request)
-
-  console.log(token)
-
-  // if later you need to refresh the token you can use
-  // const newToken = await this.getNewAccessTokenUsingRefreshToken(token.refresh_token)
-
-  reply.send({ access_token: token.access_token })
+  try {
+    const token = await fastify.discordOauth.getAccessTokenFromAuthorizationCodeFlow(request);
+    console.log(token);
+    reply.send({ access_token: token.access_token });
+  } catch (err) {
+    throw new Error(err);
+  }
 });
