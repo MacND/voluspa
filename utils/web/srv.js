@@ -1,7 +1,8 @@
 const fastify = require('fastify')();
-const oauthPlugin = require('fastify-oauth2')
+const oauthPlugin = require('fastify-oauth2');
 const config = require(__basedir + '/config/discord.json');
-// const db = require(__basedir + '/utils/database/db.js');
+const axios = require('axios');
+const db = require(__basedir + '/utils/database/db.js');
 const path = require('path');
 
 fastify.register(require('fastify-static'), {
@@ -38,8 +39,20 @@ fastify.register(oauthPlugin, {
 fastify.get('/login/discord/callback', async function (request, reply) {
   try {
     const token = await fastify.discordOauth.getAccessTokenFromAuthorizationCodeFlow(request);
-    console.log(token);
-    reply.send({ access_token: token.access_token });
+
+    let user = await axios({
+      method: 'get',
+      url: 'https://discordapp.com/api/users/@me',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Bearer ${token.access_token}`
+      }
+    });
+
+    await db.users.putOAuth(user.data.id, token.access_token, token.refresh_token)
+
+    reply.redirect('/login_successful.html');
+
   } catch (err) {
     throw new Error(err);
   }

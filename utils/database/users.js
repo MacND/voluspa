@@ -83,7 +83,7 @@ module.exports = pool => ({
   putOAuth: async (discordId, accessToken, refreshToken) => {
     try {
       let [rows, fields] = await pool.query(
-        'UPDATE users SET discord_access_token = :accessToken, discord_refresh_token = : refreshToken WHERE discord_id = :discordId',
+        'UPDATE users SET discord_access_token = :accessToken, discord_refresh_token = :refreshToken WHERE discord_id = :discordId',
         {
           discordId,
           accessToken,
