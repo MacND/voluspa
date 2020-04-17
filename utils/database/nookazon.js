@@ -14,7 +14,7 @@ module.exports = pool => ({
 
   addProfile: async (discordId, nookazonUrl) => {
     try {
-      let [rows, fields] = await pool.query('INSERT INTO nookazon (discord_id, nookazon_profile_url) VALUES (:discordId, :nookazonUrl);',
+      let [rows, fields] = await pool.query('INSERT INTO nookazon (discord_id, nookazon_profile_url) VALUES (:discordId, :nookazonUrl) ON DUPLICATE KEY UPDATE discord_id = :discordId, nookazon_profile_url = :nookazonUrl;',
         {
           discordId,
           nookazonUrl
