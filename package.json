@@ -19,9 +19,6 @@
     "moment-timezone": "^0.5.28",
     "mysql2": "^2.1.0"
   },
-  "devDependencies": {
-    "eslint": "^5.16.0"
-  },
   "scripts": {
     "pretest": "eslint . --fix",
     "test": "echo \"No tests\""
