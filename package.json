@@ -14,9 +14,9 @@
     "enmap": "^5.2.4",
     "eslint": "^6.8.0",
     "fs": "0.0.1-security",
-    "moment": "^2.24.0",
+    "moment": "^2.25.3",
     "moment-duration-format": "^2.3.2",
-    "moment-timezone": "^0.5.26",
+    "moment-timezone": "^0.5.28",
     "mysql2": "^2.1.0"
   },
   "devDependencies": {
