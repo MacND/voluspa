@@ -24,7 +24,7 @@ module.exports = {
         messageString += `**${event.join_code}**: \`${event.fireteam.split(',').length}/6 - ${(event.start_time ? `${moment(event.start_time).tz((user ? user.timezone : 'UTC')).format('MMM Do [@] HH:mm z')}` : 'Not scheduled')}${event.fireteam.split(',').includes(message.author.id) ? ' - Joined' : ''}${event.private ? ' - 🔒' : ''}\`${event.note ? `\n • \`${event.note}\``:''}\n`;
       }
 
-      message.channel.send((messageString ? `Upcoming events${(filterUser ? ` for ${filterUser.username}`:``)}:\n${messageString.trim()}` : 'No events scheduled.'));
+      message.channel.send((messageString ? `Upcoming events${(filterUser ? ` for ${filterUser.username}`:'')}:\n${messageString.trim()}` : 'No events scheduled.'));
     } catch (err) {
       throw new Error(err);
     }

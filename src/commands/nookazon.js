@@ -9,7 +9,7 @@ module.exports = {
           message.react('✅');
           return;
         } else {
-          return message.reply(`Error: no profile URL provided.`);
+          return message.reply('Error: no profile URL provided.');
         }
       }
       
@@ -38,6 +38,6 @@ module.exports = {
     }
   },
 
-  help: 'Add your Nookazon profile, and view other users Nookazon info.  When adding your info, be sure to use your profile link (which ends in a number), and not the links ending /catalog or /wishlist.  Usage:\`\`\`Add info - !nookazon set https://nookazon.com/profile/1234567890\n\nView info - !nookazon username\`\`\`',
+  help: 'Add your Nookazon profile, and view other users Nookazon info.  When adding your info, be sure to use your profile link (which ends in a number), and not the links ending /catalog or /wishlist.  Usage:```Add info - !nookazon set https://nookazon.com/profile/1234567890\n\nView info - !nookazon username```',
   aliases: ['nook']
 };
