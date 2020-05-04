@@ -2,23 +2,22 @@
   "name": "voluspa",
   "version": "0.1.0",
   "description": "A Discord.js bot to help arrange Destiny 2 activities.",
-  "main": "bot.js",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/macnd/voluspa.git"
+  },
   "dependencies": {
-    "@discordjs/uws": "^10.149.0",
-    "availability-schedule": "^1.0.2",
+    "@discordjs/opus": "^0.3.2",
     "btoa": "^1.2.1",
-    "discord.js": "github:discordjs/discord.js",
-    "enmap": "^4.8.7",
-    "express": "^4.17.1",
-    "forever": "^1.0.0",
-    "libsodium-wrappers": "^0.7.5",
+    "discord.js": "^12.2.0",
+    "enmap": "^5.2.4",
+    "eslint": "^6.8.0",
+    "fs": "0.0.1-security",
     "moment": "^2.24.0",
     "moment-duration-format": "^2.3.2",
     "moment-timezone": "^0.5.26",
-    "mysql2": "^1.7.0",
-    "node-fetch": "^2.6.0",
-    "node-opus": "^0.3.2",
-    "request": "^2.88.0"
+    "mysql2": "^2.1.0"
   },
   "devDependencies": {
     "eslint": "^5.16.0"
