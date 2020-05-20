@@ -78,5 +78,21 @@ module.exports = pool => ({
     } catch (err) {
       throw new Error(err);
     }
+  },
+
+  putOAuth: async (discordId, accessToken, refreshToken) => {
+    try {
+      let [rows, fields] = await pool.query(
+        'INSERT INTO users (discord_id, discord_access_token, discord_refresh_token) VALUES(:discordId, :accessToken, :refreshToken) ON DUPLICATE KEY UPDATE discord_access_token = :accessToken, discord_refresh_token = :refreshToken',
+        {
+          discordId,
+          accessToken,
+          refreshToken
+        }
+      );
+      return rows;
+    } catch (err) {
+      throw new Error(err);
+    }
   }
 });

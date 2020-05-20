@@ -7,6 +7,7 @@ const fs = require('fs');
 const client = new Discord.Client({ disableEveryone: true });
 const config = require(__basedir + '/src/config/discord.json');
 client.config = config;
+const auth = require(__basedir + '/src/utils/auth/auth.js')
 
 fs.readdir(__basedir + '/src/events/', (err, files) => {
   if (err) return console.error(err);
