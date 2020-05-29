@@ -1,7 +1,6 @@
-const fs = require('fs'); 
+const fs = require('fs');
 const fastify = require('fastify')();
 const fastifyOauth = require('fastify-oauth2');
-const fastifyCookie = require('fastify-cookie');
 
 const axios = require('axios');
 const path = require('path');
@@ -10,23 +9,26 @@ const db = require(__basedir + '/src/utils/database/db.js');
 
 fastify.register(require('fastify-secure-session'), {
   key: fs.readFileSync(path.join(__basedir, 'src/config/secret-key')),
+  cookie: {
+    //domain: 'voluspa.app'
+    path: '/'
+  }
 });
 
 fastify.register(require('fastify-static'), {
   root: path.join(__basedir, 'public')
 });
 
-fastify.listen(config.redirect_port, async () => {
-  console.info(`Running on port ${config.redirect_port}`);
-});
-
-fastify.get('/', async (req, res) => {
-  res.sendFile('index.html');
+fastify.register(require('point-of-view'), {
+  engine: {
+    ejs: require('ejs')
+  },
+  root: path.join(__basedir, 'public')
 });
 
 fastify.register(fastifyOauth, {
   name: 'discordOauth',
-  scope: ['identify'],
+  scope: ['identify guilds'],
   credentials: {
     client: {
       id: config.client_id,
@@ -39,15 +41,32 @@ fastify.register(fastifyOauth, {
       tokenPath: '/api/oauth2/token'
     }
   },
-  startRedirectPath: '/auth/discord',
+  startRedirectPath: '/login',
   callbackUri: config.redirect_uri
 });
 
-fastify.get('/auth/discord/callback', async function (request, reply) {
+fastify.get('/', (req, res) => {
   try {
-    const token = await fastify.discordOauth.getAccessTokenFromAuthorizationCodeFlow(request);
+    return res.view('index.ejs',
+      {
+        "userData": req.session.get('userData')
+      }
+    );
+  } catch (err) {
+    console.log(err);
+    return res.view('/error.ejs',
+      {
+        "errorMessage": err
+      }
+    );
+  }
+});
 
-    let user = await axios({
+fastify.get('/auth/discord/callback', async function (req, res, client) {
+  try {
+    const token = await fastify.discordOauth.getAccessTokenFromAuthorizationCodeFlow(req);
+
+    const user = await axios({
       method: 'get',
       url: 'https://discordapp.com/api/users/@me',
       headers: {
@@ -56,25 +75,68 @@ fastify.get('/auth/discord/callback', async function (request, reply) {
       }
     });
 
-    if (!user) {
-      reply.redirect('/auth_failure.html');
-    }
-
-    request.session.set('userData', user.data);
-    await db.users.putOAuth(user.data.id, token.access_token, token.refresh_token);
-    reply.redirect('/auth_success.html');
+    req.session.set('userData', user.data);
+    const registeredUser = await db.users.getByDiscordId(user.data.id);
     
+    res.redirect('/');
+
+/*     if (!registeredUser) {
+      // also send the user a DM on Discord - this is gonna require dependency injection, so I should redo all the routes as their own files
+      return res.redirect('/profile');
+    } else {
+      return res.redirect('/profile');
+    } */
+
   } catch (err) {
-    reply.redirect('/auth_failure.html');
-    throw new Error(err);
+    console.log(err);
+    return res.view('/error.ejs',
+      {
+        "errorMessage": err
+      }
+    );
   }
 });
 
-fastify.post('/logout', async function (request, reply) {
+fastify.get('/profile.ejs', async (req, res) => {
   try {
-    request.session.delete();
-    reply.redirect('/index.html');
+    const userData = req.session.get('data');
+    if (!userData) {
+      return res.redirect('/auth/discord');
+    }
+
+    const registeredUserData = await db.users.getByDiscordId(userData.id);
+
+    return res.view('profile.ejs',
+      {
+        "registeredUserData": registeredUserData,
+        "userData": userData
+      }
+    );
+
   } catch (err) {
-    throw new Error(err);
+    console.log(err);
+    return res.view('/error.ejs',
+      {
+        "errorMessage": err
+      }
+    );
   }
+});
+
+fastify.get('/logout', async (req, res) => {
+  try {
+    req.session.delete();
+    return res.redirect('/'); 
+  } catch (err) {
+    console.log(err);
+    return res.view('/error.ejs',
+      {
+        "errorMessage": err
+      }
+    );
+  }
+});
+
+fastify.listen(config.redirect_port, async () => {
+  console.info(`Running on port ${config.redirect_port}`);
 });

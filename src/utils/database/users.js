@@ -21,12 +21,11 @@ module.exports = pool => ({
     }
   },
 
-  post: async (discordId, bnetId, timezone) => {
+  post: async (discordId, timezone) => {
     try {
-      let [rows, fields] = await pool.query('INSERT INTO users (discord_id, bnet_id, timezone) VALUES (:discordId, :bnetId, :timezone);',
+      let [rows, fields] = await pool.query('INSERT INTO users (discord_id, timezone) VALUES (:discordId, :timezone);',
         {
           discordId,
-          bnetId,
           timezone
         }
       );
@@ -50,21 +49,7 @@ module.exports = pool => ({
       throw new Error(err);
     }
   },
-
-  putBnet: async (discordId, bnet) => {
-    try {
-      let [rows, fields] = await pool.query('UPDATE users SET bnet_id = :bnet WHERE discord_id = :discordId;',
-        {
-          discordId,
-          bnet
-        }
-      );
-      return rows;
-    } catch (err) {
-      throw new Error(err);
-    }
-  },
-
+  
   putTwitch: async (discordId, twitch) => {
     try {
       let [rows, fields] = await pool.query(

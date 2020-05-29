@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <title>Voluspa</title>
+  <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.3/build/pure-min.css"
+    integrity="sha384-cg6SkqEOCV1NbJoCu11+bm0NvBRc8IYLRGXkmNrqUBfTjmMYwNKPWBTIKyw9mHNJ" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.3/build/grids-responsive-min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Titillium+Web" rel="stylesheet">
+  <link rel='shortcut icon' type='image/x-icon' href='/images/favicon.ico' />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+
+  <div class="header">
+    <div class="home-menu pure-menu pure-menu-horizontal pure-menu-fixed">
+      <a class="pure-menu-heading" href="/">Voluspa</a>
+
+      <ul class="pure-menu-list">
+        <li class="pure-menu-item"><a href="/" class="pure-menu-link">Home</a></li>
+        <li class="pure-menu-item"><a href="#about" class="pure-menu-link">About</a></li>
+        <% if (userData) { %>
+        <li class="pure-menu-item"><a href="/logout"
+            class="pure-menu-link"><span title="Click to Logout"><%= userData.username%> <img class="discord-pfp"
+              src="https://cdn.discordapp.com/avatars/<%= userData.id %>/<%= userData.avatar %>.png"/></span></a></li>
+        <% } else { %>
+        <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
+        <% } %>
+      </ul>
+    </div>
+  </div>
+
+  <div class="splash-container">
+    <div class="splash-bg"></div>
+    <div class="splash">
+      <h1 class="splash-head">Voluspa</h1>
+      <p class="splash-subhead">
+        The Guardian's Counterattack
+      </p>
+    </div>
+  </div>
+
+  <div class="content-wrapper">
+    <div class="content" id="about">
+      <h2 class="content-head is-center">A Discord bot for organising Destiny activities</h2>
+
+      <div class="pure-g">
+        <div class="l-box pure-u-1 pure-u-md-1-2 pure-u-lg-1-3">
+
+          <h3 class="content-subhead">
+            <i class="fa fa-clock-o"></i>
+            Organise quickly and easily
+          </h3>
+          <p>
+            Sign in with Discord, see what's scheduled across all your servers converted to your own timezone, and jump
+            in.
+          </p>
+        </div>
+        <div class="l-box pure-u-1 pure-u-md-1-2 pure-u-lg-1-3">
+          <h3 class="content-subhead">
+            <i class="fa fa-github"></i>
+            Open Source
+          </h3>
+          <p>
+            Voluspa is completely open source! Check it out on <a href="https://github.com/macnd/voluspa"
+              target="_blank">GitHub</a> to report bugs, ask questions, or help build new features.
+          </p>
+        </div>
+        <div class="l-box pure-u-1 pure-u-md-1-2 pure-u-lg-1-3">
+          <h3 class="content-subhead">
+            <i class="fa fa-lock"></i>
+            Secure
+          </h3>
+          <p>
+            Voluspa only asks for the bare minimum information it needs to operate, with inrastructure built using
+            security best practices.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ribbon l-box-lrg pure-g">
+      <div class="l-box-lrg is-center pure-u-1 pure-u-md-1-2 pure-u-lg-2-5">
+        <iframe src="https://ptb.discordapp.com/widget?id=715699678229954762&theme=dark" width="350" height="500"
+          allowtransparency="true" frameborder="0"></iframe>
+      </div>
+      <div class="pure-u-1 pure-u-md-1-2 pure-u-lg-3-5">
+
+        <h2 class="content-head content-head-ribbon">Community Discord</h2>
+
+        <p>
+          Join our Discord server to ask questions, discuss development, and much more!
+        </p>
+      </div>
+    </div>
+
+</body>
+
+</html>
