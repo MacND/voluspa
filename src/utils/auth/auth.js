@@ -6,11 +6,12 @@ const axios = require('axios');
 const path = require('path');
 const config = require(__basedir + '/src/config/discord.json');
 const db = require(__basedir + '/src/utils/database/db.js');
+const moment = require(__basedir + '/src/utils/moment.js');
 
 fastify.register(require('fastify-secure-session'), {
   key: fs.readFileSync(path.join(__basedir, 'src/config/secret-key')),
   cookie: {
-    //domain: 'voluspa.app'
+    //domain: 'voluspa.app',
     path: '/'
   }
 });
@@ -49,75 +50,76 @@ fastify.get('/', (req, res) => {
   try {
     return res.view('index.ejs',
       {
-        "userData": req.session.get('userData')
+        'discordData': req.session.get('discordData')
       }
     );
   } catch (err) {
     console.log(err);
     return res.view('/error.ejs',
       {
-        "errorMessage": err
+        'errorMessage': err
       }
     );
   }
 });
 
-fastify.get('/auth/discord/callback', async function (req, res, client) {
+fastify.get('/auth/discord/callback', async (req, res) => {
   try {
+
     const token = await fastify.discordOauth.getAccessTokenFromAuthorizationCodeFlow(req);
 
-    const user = await axios({
-      method: 'get',
-      url: 'https://discordapp.com/api/users/@me',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Bearer ${token.access_token}`
-      }
-    });
+    const discordApi = async (endpoint, token) => {
+      const res = await axios({
+        method: 'get',
+        url: endpoint,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return res.data;
+    }
 
-    req.session.set('userData', user.data);
-    const registeredUser = await db.users.getByDiscordId(user.data.id);
-    
-    res.redirect('/');
-
-/*     if (!registeredUser) {
-      // also send the user a DM on Discord - this is gonna require dependency injection, so I should redo all the routes as their own files
-      return res.redirect('/profile');
+    const discordData = await discordApi('https://discordapp.com/api/users/@me', token.access_token);
+    const dbData = await db.users.getByDiscordId(discordData.id);
+    if (dbData) {
+      discordData.timezone = dbData.timezone;
     } else {
-      return res.redirect('/profile');
-    } */
+      await db.users.post(discordData.id, 'Etc/UTC');
+      discordData.timezone = 'Etc/UTC';
+    }
+    console.log(discordData);
+    req.session.set('discordData', discordData);
+
+    return res.redirect('/profile');
 
   } catch (err) {
     console.log(err);
     return res.view('/error.ejs',
       {
-        "errorMessage": err
+        'errorMessage': err
       }
     );
   }
 });
 
-fastify.get('/profile.ejs', async (req, res) => {
+fastify.get('/profile', async (req, res) => {
   try {
-    const userData = req.session.get('data');
-    if (!userData) {
-      return res.redirect('/auth/discord');
-    }
 
-    const registeredUserData = await db.users.getByDiscordId(userData.id);
+    if (!req.session.get('discordData')) {
+      return res.redirect('/login');
+    }
 
     return res.view('profile.ejs',
       {
-        "registeredUserData": registeredUserData,
-        "userData": userData
+        'discordData': req.session.get('discordData')
       }
-    );
-
+    ); 
   } catch (err) {
     console.log(err);
     return res.view('/error.ejs',
       {
-        "errorMessage": err
+        'errorMessage': err
       }
     );
   }
@@ -126,12 +128,37 @@ fastify.get('/profile.ejs', async (req, res) => {
 fastify.get('/logout', async (req, res) => {
   try {
     req.session.delete();
-    return res.redirect('/'); 
+    return res.redirect('/');
   } catch (err) {
     console.log(err);
     return res.view('/error.ejs',
       {
-        "errorMessage": err
+        'errorMessage': err
+      }
+    );
+  }
+});
+
+fastify.post('/api/users/timezone', async (req, res) => {
+  try {
+    const cookieData = req.session.get('discordData');
+    const timezone = req.body.timezone;
+
+    if (!moment.tz.zone(timezone)) {
+      throw new Error(err);
+    }
+
+    const response = await db.users.putTimezone(cookieData.id, timezone);
+    cookieData.timezone = timezone;
+    req.session.set('discordData', cookieData);
+
+    res.redirect('/profile');
+
+  } catch (err) {
+    console.log(err);
+    return res.view('/error.ejs',
+      {
+        'errorMessage': err
       }
     );
   }
