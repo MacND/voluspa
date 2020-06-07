@@ -17,7 +17,7 @@ module.exports = {
         filter = `%${filterUser.id}%`;
       }
 
-      let events = await db.events.getNext(filter);
+      let events = await db.events.getNext(filter, message.guild.id);
 
       for (let i = 0; i < events.length; i++) {
         let event = events[i];

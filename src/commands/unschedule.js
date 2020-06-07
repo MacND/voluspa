@@ -7,7 +7,7 @@ module.exports = {
         return message.reply('Please supply an event join code.');
       }
 
-      let event = await db.events.getByJoinCode(args[0]);
+      let event = await db.events.getByJoinCode(args[0], message.guild.id);
 
       if (!event) {
         return message.reply('Unable find an event with the supplied join code.');
@@ -19,7 +19,7 @@ module.exports = {
         return message.reply('You are not an admin for this event.');
       }
 
-      await db.events.putStartTime(null, event.join_code);
+      await db.events.putStartTime(null, event.id);
       message.react('✅');
     } catch (err) {
       throw new Error(err);

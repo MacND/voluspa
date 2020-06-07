@@ -46,7 +46,7 @@ fastify.register(fastifyOauth, {
   callbackUri: config.redirect_uri
 });
 
-fastify.get('/', (req, res) => {
+fastify.get('/', async (req, res) => {
   try {
     return res.view('index.ejs',
       {
@@ -81,6 +81,15 @@ fastify.get('/auth/discord/callback', async (req, res) => {
     }
 
     const discordData = await discordApi('https://discordapp.com/api/users/@me', token.access_token);
+    const discordGuilds = await discordApi('https://discordapp.com/api/users/@me/guilds', token.access_token);
+    discordData.guilds = [];
+    discordGuilds.forEach(guild => {
+      discordData.guilds.push({
+        id: guild.id,
+        icon: guild.icon
+      })
+    });
+
     const dbData = await db.users.getByDiscordId(discordData.id);
     if (dbData) {
       discordData.timezone = dbData.timezone;
@@ -105,12 +114,30 @@ fastify.get('/auth/discord/callback', async (req, res) => {
 
 fastify.get('/profile', async (req, res) => {
   try {
-
     if (!req.session.get('discordData')) {
       return res.redirect('/login');
     }
 
+
+
     return res.view('profile.ejs',
+      {
+        'discordData': req.session.get('discordData')
+      }
+    ); 
+  } catch (err) {
+    console.log(err);
+    return res.view('/error.ejs',
+      {
+        'errorMessage': err
+      }
+    );
+  }
+});
+
+fastify.get('/privacy', async (req, res) => {
+  try {
+    return res.view('privacy.ejs',
       {
         'discordData': req.session.get('discordData')
       }

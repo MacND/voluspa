@@ -1,7 +1,11 @@
 module.exports = pool => ({
-  get: async () => {
+  get: async (serverId) => {
     try {
-      let [rows, fields] = await pool.query('SELECT * FROM events');
+      let [rows, fields] = await pool.query('SELECT * FROM events WHERE server_id = :serverId;',
+        {
+          serverId 
+        }
+    );
       return rows;
     } catch (err) {
       throw new Error(err);
@@ -10,7 +14,7 @@ module.exports = pool => ({
 
   getById: async (id) => {
     try {
-      let [rows, fields] = await pool.query('SELECT * FROM events WHERE id = :id',
+      let [rows, fields] = await pool.query('SELECT * FROM events WHERE id = :id;',
         {
           id
         }
@@ -21,11 +25,12 @@ module.exports = pool => ({
     }
   },
   
-  getByJoinCode: async (joinCode) => {
+  getByJoinCode: async (joinCode, serverId) => {
     try {
-      let [rows, fields] = await pool.query('SELECT * FROM events WHERE join_code = :joinCode;',
+      let [rows, fields] = await pool.query('SELECT * FROM events WHERE join_code = :joinCode AND server_id = :serverId;',
         {
-          joinCode
+          joinCode,
+          serverId
         }
       );
       return rows[0];
@@ -34,11 +39,12 @@ module.exports = pool => ({
     }
   },
 
-  getNext: async (filter='%') => {
+  getNext: async (filter='%', serverId) => {
     try {
-      let [rows, fields] = await pool.query('SELECT * FROM vw_next_3_events WHERE fireteam LIKE :filter;',
+      let [rows, fields] = await pool.query('SELECT * FROM vw_next_3_events WHERE fireteam LIKE :filter AND server_id = :serverId;',
         {
-          filter
+          filter,
+          serverId
         }
       );
       return rows;
@@ -47,15 +53,16 @@ module.exports = pool => ({
     }
   },
 
-  post: async (creatorId, activityId, openedTime, private) => {
+  post: async (creatorId, activityId, openedTime, private, serverId) => {
     try {
       let [rows, fields] = await pool.query(`
-        CALL make_event(:activityId, :openedTime, :creatorId, :private, @join_code); SELECT @join_code AS join_code;`,
+        CALL make_event(:activityId, :openedTime, :creatorId, :private, :serverId); SELECT @join_code AS join_code;`,
       {
         creatorId,
         activityId,
         openedTime,
-        private
+        private,
+        serverId
       }
       );
       return rows;
@@ -80,7 +87,7 @@ module.exports = pool => ({
 
   putFinishTime: async (finishTime, eventId) => {
     try {
-      let [rows, fields] = await pool.query('UPDATE events SET finish_time = :finishTime WHERE id = :eventId',
+      let [rows, fields] = await pool.query('UPDATE events SET finish_time = :finishTime WHERE id = :eventId;',
         {
           finishTime,
           eventId
@@ -98,7 +105,7 @@ module.exports = pool => ({
         rows,
         fields
       ] = await pool.query(
-        'UPDATE events SET raid_report_url = :rrLink WHERE id = :eventId',
+        'UPDATE events SET raid_report_url = :rrLink WHERE id = :eventId;',
         {
           rrLink,
           eventId
@@ -116,7 +123,7 @@ module.exports = pool => ({
         rows,
         fields
       ] = await pool.query(
-        'UPDATE events SET note = :note WHERE id = :eventId',
+        'UPDATE events SET note = :note WHERE id = :eventId;',
         {
           note,
           eventId
