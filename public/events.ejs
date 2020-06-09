@@ -49,20 +49,22 @@
           </h3>
           <table class="pure-table pure-table-bordered">
             <thead>
-              <th>Name</th>
-              <th>Start Time</th>
               <th>Join Code</th>
-              <th>Note</th>
+              <th>Fireteam</th>
+              <th>Start Time</th>
+              <th>Other info</th>
             </thead>
             <tbody>
               <% guild.next.forEach(event => { %>
               <tr>
-                <td><%= event.name %></td>
+                <td><span title="<%= event.name %>"><%= event.join_code %></span> </td>
+                <td>
+                  <%= (event.fireteam.split(',').includes(discordData.id) ? `${event.fireteam.split(',').length} - Joined` : event.fireteam.split(',').length) %>
+                </td>
                 <td>
                   <%= (event.start_time ? moment(event.start_time).tz(discordData.timezone).format('MMMM Do [@] HH:mm z') : 'Not scheduled') %>
                 </td>
-                <td><%= event.join_code %></td>
-                <td><%= event.note %></td>
+                <td><%= `${(event.private ? '🔒' : '🔓')} ${(event.note ? ` - ${event.note}` : '')}` %></td>
               </tr>
               <% }); %>
               <% });%>

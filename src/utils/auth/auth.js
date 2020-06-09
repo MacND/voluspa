@@ -12,7 +12,7 @@ const moment = require(__basedir + '/src/utils/moment.js');
 fastify.register(require('fastify-secure-session'), {
   key: fs.readFileSync(path.join(__basedir, 'src/config/secret-key')),
   cookie: {
-    domain: 'voluspa.app',
+    //domain: 'voluspa.app',
     path: '/'
   }
 });
@@ -93,7 +93,9 @@ fastify.get('/auth/discord/callback', async (req, res) => {
     }
 
     req.session.set('discordData', discordData);
-    return res.redirect('/profile');
+    const redirectTo = req.session.get('redirectTo');
+    console.log(`Redirect: ${redirectTo}`);
+    return res.redirect((redirectTo ? redirect : '/profile'));
 
   } catch (err) {
     console.log(err);
@@ -108,6 +110,8 @@ fastify.get('/auth/discord/callback', async (req, res) => {
 fastify.get('/profile', async (req, res) => {
   try {
     if (!req.session.get('discordData')) {
+      req.session.set('redirectTo', '/profile');
+      console.log(req.session.get('redirectTo'));
       return res.redirect('/login');
     }
 
@@ -129,6 +133,8 @@ fastify.get('/profile', async (req, res) => {
 fastify.get('/events', async (req, res) => {
   try {
     if (!req.session.get('discordData')) {
+      req.session.set('redirectTo', '/events');
+      console.log(req.session.get('redirectTo'));
       return res.redirect('/login');
     }
 
