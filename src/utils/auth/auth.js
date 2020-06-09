@@ -8,6 +8,7 @@ const config = require(__basedir + '/src/config/discord.json');
 const db = require(__basedir + '/src/utils/database/db.js');
 const moment = require(__basedir + '/src/utils/moment.js');
 
+
 fastify.register(require('fastify-secure-session'), {
   key: fs.readFileSync(path.join(__basedir, 'src/config/secret-key')),
   cookie: {
@@ -81,14 +82,7 @@ fastify.get('/auth/discord/callback', async (req, res) => {
     }
 
     const discordData = await discordApi('https://discordapp.com/api/users/@me', token.access_token);
-    const discordGuilds = await discordApi('https://discordapp.com/api/users/@me/guilds', token.access_token);
-    discordData.guilds = [];
-    discordGuilds.forEach(guild => {
-      discordData.guilds.push({
-        id: guild.id,
-        icon: guild.icon
-      })
-    });
+    discordData.access_token = token.access_token;
 
     const dbData = await db.users.getByDiscordId(discordData.id);
     if (dbData) {
@@ -97,9 +91,8 @@ fastify.get('/auth/discord/callback', async (req, res) => {
       await db.users.post(discordData.id, 'Etc/UTC');
       discordData.timezone = 'Etc/UTC';
     }
-    console.log(discordData);
-    req.session.set('discordData', discordData);
 
+    req.session.set('discordData', discordData);
     return res.redirect('/profile');
 
   } catch (err) {
@@ -118,13 +111,62 @@ fastify.get('/profile', async (req, res) => {
       return res.redirect('/login');
     }
 
-
-
     return res.view('profile.ejs',
       {
         'discordData': req.session.get('discordData')
       }
-    ); 
+    );
+  } catch (err) {
+    console.log(err);
+    return res.view('/error.ejs',
+      {
+        'errorMessage': err
+      }
+    );
+  }
+});
+
+fastify.get('/events', async (req, res) => {
+  try {
+    if (!req.session.get('discordData')) {
+      return res.redirect('/login');
+    }
+
+    const discordGuilds = await axios({
+      method: 'get',
+      url: 'https://discordapp.com/api/users/@me/guilds',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Bearer ${req.session.get('discordData').access_token}`
+      }
+    });
+
+    const botGuilds = await axios({
+      method: 'get',
+      url: 'https://discordapp.com/api/users/@me/guilds',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Bot ${config.token}`
+      }
+    });
+
+    const botGuildIds = new Set(botGuilds.data.map(botGuild => botGuild.id));
+    const sharedGuilds = discordGuilds.data.filter(userGuild => botGuildIds.has(userGuild.id));
+
+    await Promise.all(sharedGuilds.map(async (guild) => {
+      guild.next = new Array;
+      const res = await db.events.getNext(req.session.get('discordData').id, guild.id);
+      res.forEach(event => guild.next.push(event));
+      return;
+    }));
+
+    return res.view('events.ejs',
+      {
+        'discordData': req.session.get('discordData'),
+        'guilds': sharedGuilds,
+        moment: moment
+      }
+    );
   } catch (err) {
     console.log(err);
     return res.view('/error.ejs',
@@ -141,7 +183,7 @@ fastify.get('/privacy', async (req, res) => {
       {
         'discordData': req.session.get('discordData')
       }
-    ); 
+    );
   } catch (err) {
     console.log(err);
     return res.view('/error.ejs',

@@ -56,7 +56,7 @@ module.exports = pool => ({
   post: async (creatorId, activityId, openedTime, private, serverId) => {
     try {
       let [rows, fields] = await pool.query(`
-        CALL make_event(:activityId, :openedTime, :creatorId, :private, :serverId); SELECT @join_code AS join_code;`,
+        CALL make_event(:activityId, :openedTime, :creatorId, :private, :serverId, @join_code); SELECT @join_code AS join_code;`,
       {
         creatorId,
         activityId,

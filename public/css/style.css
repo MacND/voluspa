@@ -140,6 +140,13 @@ a.pure-button-primary {
     vertical-align: middle !important;
 }
 
+.discord-guild-pfp {
+    display: inline;
+    max-height: 1.7em;
+    vertical-align: middle !important;
+    border-radius: 50%;
+}
+
 /*
  * -- SPLASH STYLES --
  * This is the blue top section that appears on the page.
@@ -278,6 +285,48 @@ a.pure-button-primary {
 }
 
 .profile-subhead i {
+    margin-right: 7px;
+}
+
+/*
+ * -- events STYLES --
+ * This represents the events area (everything below the blue section)
+ */
+ .events-wrapper {
+    /* These styles are required for the "scroll-over" effect */
+    position: absolute;
+    top: 13%;
+    width: 100%;
+    min-height: 12%;
+    z-index: 2;
+    background: white;
+
+}
+
+/* We want to give the events area some more padding */
+.events {
+    padding: 1em 1em 3em;
+}
+
+/* This is the class used for the main events headers (<h2>) */
+.events-head {
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 2em 0 1em;
+}
+
+/* This is a modifier class used when the events-head is inside a ribbon */
+.events-head-ribbon {
+    color: white;
+}
+
+/* This is the class used for the events sub-headers (<h3>) */
+.events-subhead {
+    color: #301a4a;
+}
+
+.events-subhead i {
     margin-right: 7px;
 }
 
