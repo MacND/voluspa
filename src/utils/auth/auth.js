@@ -12,7 +12,7 @@ const moment = require(__basedir + '/src/utils/moment.js');
 fastify.register(require('fastify-secure-session'), {
   key: fs.readFileSync(path.join(__basedir, 'src/config/secret-key')),
   cookie: {
-    //domain: 'voluspa.app',
+    domain: 'voluspa.app',
     path: '/'
   }
 });
@@ -155,7 +155,7 @@ fastify.get('/events', async (req, res) => {
 
     await Promise.all(sharedGuilds.map(async (guild) => {
       guild.next = new Array;
-      const res = await db.events.getNext(req.session.get('discordData').id, guild.id);
+      const res = await db.events.getNext(null, guild.id);
       res.forEach(event => guild.next.push(event));
       return;
     }));
