@@ -39,11 +39,10 @@ module.exports = pool => ({
     }
   },
 
-  getNext: async (filter='%', serverId) => {
+  getNext: async (serverId) => {
     try {
-      let [rows, fields] = await pool.query('SELECT * FROM vw_next_3_events WHERE fireteam LIKE :filter AND server_id = :serverId;',
+      let [rows, fields] = await pool.query('SELECT * FROM vw_next_3_events WHERE server_id = :serverId;',
         {
-          filter,
           serverId
         }
       );
