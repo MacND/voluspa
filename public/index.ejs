@@ -20,13 +20,12 @@
       <a class="pure-menu-heading" href="/">Voluspa</a>
       <ul class="pure-menu-list">
         <% if (discordData) { %>
-          <li class="pure-menu-item"><a href="/events" class="pure-menu-link">Events</a></li>
-          <li class="pure-menu-item"><a href="/profile" class="pure-menu-link"><img
-                  class="discord-pfp"
-                  src="https://cdn.discordapp.com/avatars/<%= discordData.id %>/<%= discordData.avatar %>.png" /></a>
-          </li>
+        <li class="pure-menu-item"><a href="/events" class="pure-menu-link">Events</a></li>
+        <li class="pure-menu-item"><a href="/profile" class="pure-menu-link"><img class="discord-pfp"
+              src="https://cdn.discordapp.com/avatars/<%= discordData.id %>/<%= discordData.avatar %>.png" /></a>
+        </li>
         <% } else { %>
-          <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
+        <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
         <% } %>
       </ul>
     </div>
@@ -37,7 +36,7 @@
     <div class="splash">
       <h1 class="splash-head">Voluspa</h1>
       <p class="splash-subhead">
-        The Guardian's Counterattack
+        The Guardians' Counterattack
       </p>
     </div>
   </div>
@@ -74,8 +73,8 @@
             Secure
           </h3>
           <p>
-            Voluspa only asks for the bare minimum information it needs to operate, with inrastructure built using
-            security best practices.
+            Voluspa only asks for the bare minimum information it needs to operate, with ongoing efforts to refactor our
+            infrastructure using security best practices.
           </p>
         </div>
       </div>
