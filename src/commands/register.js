@@ -18,5 +18,5 @@ module.exports = {
     }
   },
 
-  help: 'Register to use the bot.  You must provide your BNet ID including discriminator (e.g. `Voluspa#12345`), and your timezone in TZ database string format (e.g. `Europe/London`).'
+  help: 'Register to use the bot.'
 };

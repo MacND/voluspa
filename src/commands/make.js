@@ -27,5 +27,5 @@ module.exports = {
     }
   },
 
-  help: `Make a new event.  You must provide an activity nickname (\`${client.config.prefix}activityinfo\`).  You can also use the \`-private\` flag to create a private event.`
+  help: 'Make a new event.  You must provide an activity nickname (`!activityinfo`).  You can also use the `-private` flag to create a private event.'
 };
