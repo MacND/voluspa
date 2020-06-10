@@ -20,5 +20,5 @@ module.exports = {
     }
   },
 
-  help: 'Get help on commands.  `!help` with no arguments lists all available commands, `!help` with a valid command name shows extended help and information on the specified command.'
+  help: `Get help on commands.  \`${client.config.prefix}help\` with no arguments lists all available commands, \`${client.config.prefix}help\` with a valid command name shows extended help and information on the specified command.`
 };

@@ -7,7 +7,7 @@ module.exports = {
       let user = await db.users.getByDiscordId(message.author.id);
 
       if (user) {
-        return message.reply('You appear to already be registered - do `!userinfo` to view your current details, or go to <https://voluspa.app/profile>');
+        return message.reply(`You appear to already be registered - do \`${client.config.prefix}userinfo\` to view your current details, or go to <https://voluspa.app/profile>`);
       } else {
         return message.reply('You can register by visiting <https://voluspa.app/login>');
       } 

@@ -31,5 +31,5 @@ module.exports = {
     }
   },
 
-  help: 'Get information about activities.  `!activityinfo` with no arguments lists all available activities, `!activityinfo` with an activity nickname shows extended information.'
+  help: `Get information about activities.  \`${client.config.prefix}activityinfo\` with no arguments lists all available activities, \`${client.config.prefix}activityinfo\` with an activity nickname shows extended information.`
 };
