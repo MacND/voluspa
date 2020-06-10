@@ -411,3 +411,11 @@ a.pure-button-primary {
         display: none
     }
 }
+
+.align-centre {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-width: 300px;
+    margin:0 auto;
+}

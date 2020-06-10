@@ -18,15 +18,15 @@
   <div class="header">
     <div class="home-menu pure-menu pure-menu-horizontal pure-menu-fixed">
       <a class="pure-menu-heading" href="/">Voluspa</a>
-
       <ul class="pure-menu-list">
-        <li class="pure-menu-item"><a href="/" class="pure-menu-link">Home</a></li>
         <% if (discordData) { %>
-        <li class="pure-menu-item"><a href="/profile"
-            class="pure-menu-link"><img class="discord-pfp"
-              src="https://cdn.discordapp.com/avatars/<%= discordData.id %>/<%= discordData.avatar %>.png"/></span></a></li>
+          <li class="pure-menu-item"><a href="/events" class="pure-menu-link">Events</a></li>
+          <li class="pure-menu-item"><a href="/profile" class="pure-menu-link"><img
+                  class="discord-pfp"
+                  src="https://cdn.discordapp.com/avatars/<%= discordData.id %>/<%= discordData.avatar %>.png" /></a>
+          </li>
         <% } else { %>
-        <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
+          <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
         <% } %>
       </ul>
     </div>

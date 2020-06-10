@@ -9,7 +9,9 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Titillium+Web" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/css/selectize.bootstrap3.min.css" integrity="sha256-ze/OEYGcFbPRmvCnrSeKbRTtjG4vGLHXgOqsyLFTRjg=" crossorigin="anonymous" />
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/css/selectize.bootstrap3.min.css"
+    integrity="sha256-ze/OEYGcFbPRmvCnrSeKbRTtjG4vGLHXgOqsyLFTRjg=" crossorigin="anonymous" />
   <link rel='shortcut icon' type='image/x-icon' href='/images/favicon.ico' />
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
@@ -19,13 +21,11 @@
   <div class="header">
     <div class="home-menu pure-menu pure-menu-horizontal pure-menu-fixed">
       <a class="pure-menu-heading" href="/">Voluspa</a>
-
       <ul class="pure-menu-list">
-        <li class="pure-menu-item"><a href="/" class="pure-menu-link">Home</a></li>
         <% if (discordData) { %>
-        <li class="pure-menu-item"><a href="/profile" class="pure-menu-link"><img
-                class="discord-pfp"
-                src="https://cdn.discordapp.com/avatars/<%= discordData.id %>/<%= discordData.avatar %>.png" /></a>
+        <li class="pure-menu-item"><a href="/events" class="pure-menu-link">Events</a></li>
+        <li class="pure-menu-item"><a href="/profile" class="pure-menu-link"><img class="discord-pfp"
+              src="https://cdn.discordapp.com/avatars/<%= discordData.id %>/<%= discordData.avatar %>.png" /></a>
         </li>
         <% } else { %>
         <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
@@ -51,17 +51,26 @@
         </div>
         <div class="l-box pure-u-1 pure-u-md-2-5 pure-u-lg-2-5">
           <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.26.0/moment.min.js"></script>
-          <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.31/moment-timezone-with-data.min.js"></script>
+          <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.31/moment-timezone-with-data.min.js"></script>
           <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-          <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/js/standalone/selectize.min.js" integrity="sha256-+C0A5Ilqmu4QcSPxrlGpaZxJ04VjsRjKu+G82kl5UJk=" crossorigin="anonymous"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/js/standalone/selectize.min.js"
+            integrity="sha256-+C0A5Ilqmu4QcSPxrlGpaZxJ04VjsRjKu+G82kl5UJk=" crossorigin="anonymous"></script>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.min.js"></script>
 
-          <select id="timezone-selector" class="timezone-selector" placeholder="<%= (discordData.timezone ? discordData.timezone : 'Set your timezone') %>" onchange="setNewTimezone(document.getElementById('timezone-selector').value); changeTimezoneSubhead();"></select>
+          <select id="timezone-selector" class="timezone-selector"
+            placeholder="<%= (discordData.timezone ? discordData.timezone : 'Set your timezone') %>"
+            onchange="setNewTimezone(document.getElementById('timezone-selector').value); changeTimezoneSubhead();"></select>
           <sup>Note: You can search this list instead of scrolling to find your timezone.</sup>
           <script src="js/profile.js"></script>
         </div>
         <div class="l-box pure-u-1 pure-u-md-1-5 pure-u-lg-1-5 grid-padding"></div>
-<!--         <div class="l-box pure-u-1 pure-u-md-1-5 pure-u-lg-1-5 grid-padding"></div>
+        <div class="l-box pure-u-1 pure-u-md-2-5 pure-u-lg-2-5 grid-padding"></div>
+        <div class="l-box pure-u-1 pure-u-md-1-5 pure-u-lg-1-5">
+          <a class="pure-button align-centre" href="/logout">Logout</a>
+        </div>
+        <div class="l-box pure-u-1 pure-u-md-2-5 pure-u-lg-2-5 grid-padding"></div>
+        <!--         <div class="l-box pure-u-1 pure-u-md-1-5 pure-u-lg-1-5 grid-padding"></div>
         <div class="l-box pure-u-1 pure-u-md-1-5 pure-u-lg-1-5">
           <h3 class="profile-subhead">
             <i class="fa fa-clock-o"></i>

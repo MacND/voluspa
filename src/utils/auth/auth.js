@@ -12,7 +12,7 @@ const moment = require(__basedir + '/src/utils/moment.js');
 fastify.register(require('fastify-secure-session'), {
   key: fs.readFileSync(path.join(__basedir, 'src/config/secret-key')),
   cookie: {
-    //domain: 'voluspa.app',
+    domain: 'voluspa.app',
     path: '/'
   }
 });

@@ -21,15 +21,15 @@
   <div class="header">
     <div class="home-menu pure-menu pure-menu-horizontal pure-menu-fixed">
       <a class="pure-menu-heading" href="/">Voluspa</a>
-
       <ul class="pure-menu-list">
-        <li class="pure-menu-item"><a href="/" class="pure-menu-link">Home</a></li>
         <% if (discordData) { %>
-        <li class="pure-menu-item"><a href="/profile" class="pure-menu-link"><img class="discord-pfp"
-              src="https://cdn.discordapp.com/avatars/<%= discordData.id %>/<%= discordData.avatar %>.png" /></a>
-        </li>
+          <li class="pure-menu-item"><a href="/events" class="pure-menu-link">Events</a></li>
+          <li class="pure-menu-item"><a href="/profile" class="pure-menu-link"><img
+                  class="discord-pfp"
+                  src="https://cdn.discordapp.com/avatars/<%= discordData.id %>/<%= discordData.avatar %>.png" /></a>
+          </li>
         <% } else { %>
-        <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
+          <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
         <% } %>
       </ul>
     </div>
@@ -64,7 +64,12 @@
                 <td>
                   <%= (event.start_time ? moment(event.start_time).tz(discordData.timezone).format('MMMM Do [@] HH:mm z') : 'Not scheduled') %>
                 </td>
-                <td><%= `${(event.private ? '🔒' : '🔓')} ${(event.note ? ` - ${event.note}` : '')}` %></td>
+                <td>
+                  <% if (event.private) { %> 
+                    <span title="Private">🔒</span> <%= (event.note ? ` - ${event.note}` : '') %>
+                  <% } else { %>
+                    <span title="Open">🔓</span> <%= (event.note ? ` - ${event.note}` : '') %>
+                  <% } %></td>
               </tr>
               <% }); %>
               <% });%>
