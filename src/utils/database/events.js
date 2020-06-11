@@ -5,7 +5,7 @@ module.exports = pool => ({
         {
           serverId 
         }
-    );
+      );
       return rows;
     } catch (err) {
       throw new Error(err);

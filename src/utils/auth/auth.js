@@ -79,7 +79,7 @@ fastify.get('/auth/discord/callback', async (req, res) => {
         }
       });
       return res.data;
-    }
+    };
 
     const discordData = await discordApi('https://discordapp.com/api/users/@me', token.access_token);
     discordData.access_token = token.access_token;
@@ -93,9 +93,7 @@ fastify.get('/auth/discord/callback', async (req, res) => {
     }
 
     req.session.set('discordData', discordData);
-    const redirectTo = req.session.get('redirectTo');
-    console.log(`Redirect: ${redirectTo}`);
-    return res.redirect((redirectTo ? redirect : '/profile'));
+    return res.redirect('/profile');
 
   } catch (err) {
     console.log(err);
@@ -220,7 +218,7 @@ fastify.post('/api/users/timezone', async (req, res) => {
     const timezone = req.body.timezone;
 
     if (!moment.tz.zone(timezone)) {
-      throw new Error(err);
+      throw new Error;
     }
 
     const response = await db.users.putTimezone(cookieData.id, timezone);
