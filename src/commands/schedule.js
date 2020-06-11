@@ -28,7 +28,12 @@ module.exports = {
       }
 
       let user = await db.users.getByDiscordId(message.author.id);
-      let suggestedDateTime = moment(suggestion, ['MMM DD HH:mm', 'MMM DD h:mma', 'dddd HH:mm', 'dddd h:mma',  'HH:mm', 'h:mma', 'ha']);
+      let suggestedDateTime = moment(suggestion, ['MMM DD HH:mm', 'MMM DD h:mma', 'dddd HH:mm', 'dddd h:mma', 'ddd HH:mm', 'ddd h:mma', 'dddd ha', 'ddd ha',  'HH:mm', 'h:mma', 'ha']);
+      
+      if (!suggestedDateTime.isValid()) {
+        return message.reply('Invalid date-time format.  Please check `!help schedule` to see suitable formats.');
+      }
+      
       let offset = moment.tz(suggestedDateTime, user.timezone).utcOffset();
       suggestedDateTime.utcOffset(offset, true);
       
@@ -48,5 +53,5 @@ module.exports = {
     }
   },
 
-  help: 'Set a start time for an event.  Specifiy a join code, and a start time in one of the following formats: ```\nJanuary 1 12:00\nJanuary 1 12:00pm\nMonday 12:00\nMonday 12:00pm\n12:00\n12:00pm```'
+  help: 'Set a start time for an event.  Specifiy a join code, and a start time in one of the following formats: ```\nJanuary 1 9:00am\nJanuary 1 09:00\nMonday 09:00\nMonday 9:00am\nMon 09:00\nMon 9:00am\nMonday 9am\nMon 9am\n09:00\n9:00am\n9am```'
 };
