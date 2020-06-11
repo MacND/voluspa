@@ -67,7 +67,7 @@
                   <% if (event.private) { %>
                   <span title="Private">🔒</span> <%= (event.note ? ` - ${event.note}` : '') %>
                   <% } else { %>
-                  <span title="Open">🔓</span> <%= (event.note ? ` - ${event.note}` : '') %>
+                  <%= (event.note ? event.note : '') %>
                   <% } %></td>
               </tr>
               <% }); %>
