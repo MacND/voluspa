@@ -7,17 +7,13 @@ module.exports = {
         return;
       }
 
-      let files = fs.readdirSync(__basedir + '/src/utils/shaxx');
-      let file = files[Math.floor(Math.random() * files.length)];
-      let connection = await message.member.voice.channel.join();
+      const files = fs.readdirSync(__basedir + '/src/utils/shaxx');
+      const file = files[Math.floor(Math.random() * files.length)];
+      const connection = await message.member.voice.channel.join();
       console.log(__basedir + '/src/utils/shaxx/' + file);
-      let dispatcher = connection.play(__basedir + '/src/utils/shaxx/' + file);
+      const dispatcher = connection.play(__basedir + '/src/utils/shaxx/' + file);
 
-      dispatcher.on('start', () => {
-        connection.player.streamingData.pausedTime = 0;
-      });
-
-      dispatcher.on('end', () => {
+      dispatcher.on('finish', () => {
         message.member.voice.channel.leave();
       });
 
