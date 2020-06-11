@@ -42,7 +42,7 @@ module.exports = {
       let fireteam = await db.fireteams.getByEventId(event.id);
       notify.pingUsers(fireteam.discord_id.split(','), `${event.join_code} has now been scheduled for ${suggestedDateTime.utc().format('MMMM Do [@] HH:mm z')}.`);
       notify.pingUsersBeforeEvent(fireteam.discord_id.split(','), `In 10 minutes you are scheduled to take part in **${event.join_code}**.  Please proceed to orbit and join up with your fireteam.`, suggestedDateTime.utc(), event.join_code);
-      message.reply(`${event.join_code} has now been scheduled for ${suggestedDateTime.utc().format('MMMM Do [@] HH:mm z')}.`);
+      message.reply(`${event.join_code} has now been scheduled for ${moment(suggestedDateTime).tz(user.timezone).format('MMMM Do [@] HH:mm z')}.`);
     } catch (err) {
       throw new Error(err);
     }
