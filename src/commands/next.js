@@ -4,7 +4,7 @@ const moment = require(__basedir + '/src/utils/moment.js');
 module.exports = {
   run: async (client, message, args) => {
     try {
-      if (message.channel.type = 'dm') {
+      if (message.channel.type === 'dm') {
         return message.reply('You can check upcoming events across your servers at <https://voluspa.app/events>');
       }
 
