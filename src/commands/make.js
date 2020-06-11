@@ -19,7 +19,7 @@ module.exports = {
       
       args.includes('-private') ? private = 1 : private = 0;
 
-      let res = await db.events.post(message.author.id, activity.id, moment.utc().format('YYYY-MM-DD HH:mm:ss'), private);
+      let res = await db.events.post(message.author.id, activity.id, moment.utc().format('YYYY-MM-DD HH:mm:ss'), private, message.guild.id);
       message.reply(`Created event with join code \`${res[5][0].join_code}\`.`);
 
     } catch (err) {

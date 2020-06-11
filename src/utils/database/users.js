@@ -21,12 +21,11 @@ module.exports = pool => ({
     }
   },
 
-  post: async (discordId, bnetId, timezone) => {
+  post: async (discordId, timezone) => {
     try {
-      let [rows, fields] = await pool.query('INSERT INTO users (discord_id, bnet_id, timezone) VALUES (:discordId, :bnetId, :timezone);',
+      let [rows, fields] = await pool.query('INSERT INTO users (discord_id, timezone) VALUES (:discordId, :timezone);',
         {
           discordId,
-          bnetId,
           timezone
         }
       );
@@ -50,13 +49,14 @@ module.exports = pool => ({
       throw new Error(err);
     }
   },
-
-  putBnet: async (discordId, bnet) => {
+  
+  putTwitch: async (discordId, twitch) => {
     try {
-      let [rows, fields] = await pool.query('UPDATE users SET bnet_id = :bnet WHERE discord_id = :discordId;',
+      let [rows, fields] = await pool.query(
+        'UPDATE users SET twitch = :twitch WHERE discord_id = :discordId',
         {
           discordId,
-          bnet
+          twitch
         }
       );
       return rows;
@@ -65,13 +65,14 @@ module.exports = pool => ({
     }
   },
 
-  putTwitch: async (discordId, twitch) => {
+  putOAuth: async (discordId, accessToken, refreshToken) => {
     try {
       let [rows, fields] = await pool.query(
-        'UPDATE users SET twitch = :twitch WHERE discord_id = :discordId',
+        'INSERT INTO users (discord_id, discord_access_token, discord_refresh_token) VALUES(:discordId, :accessToken, :refreshToken) ON DUPLICATE KEY UPDATE discord_access_token = :accessToken, discord_refresh_token = :refreshToken',
         {
           discordId,
-          twitch
+          accessToken,
+          refreshToken
         }
       );
       return rows;

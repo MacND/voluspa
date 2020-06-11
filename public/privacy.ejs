@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <title>Privacy - Voluspa</title>
+  <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.3/build/pure-min.css"
+    integrity="sha384-cg6SkqEOCV1NbJoCu11+bm0NvBRc8IYLRGXkmNrqUBfTjmMYwNKPWBTIKyw9mHNJ" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.3/build/grids-responsive-min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Titillium+Web" rel="stylesheet">
+  <link rel='shortcut icon' type='image/x-icon' href='/images/favicon.ico' />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+  <div class="header">
+    <div class="home-menu pure-menu pure-menu-horizontal pure-menu-fixed">
+      <a class="pure-menu-heading" href="/">Voluspa</a>
+
+      <ul class="pure-menu-list">
+        <li class="pure-menu-item"><a href="/" class="pure-menu-link">Home</a></li>
+        <% if (discordData) { %>
+        <li class="pure-menu-item"><a href="/profile"
+            class="pure-menu-link"><img class="discord-pfp"
+              src="https://cdn.discordapp.com/avatars/<%= discordData.id %>/<%= discordData.avatar %>.png"/></span></a></li>
+        <% } else { %>
+        <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
+        <% } %>
+      </ul>
+    </div>
+  </div>
+
+  <div class="profile-wrapper">
+    <div class="profile">
+      <h2 class="profile-head is-center">Your data, what we store, and how we use it</h2>
+
+      <div class="pure-g">
+        <div class="l-box pure-u-1 pure-u-md-5-5 pure-u-lg-5-5">
+
+          <h3 id="policy-subhead" class="policy-subhead">
+            <i class="fa fa-lock"></i>
+            Privacy
+          </h3>
+          <p>Voluspa collects and stores the following data about you and stores it in the following ways:</p>
+          <h4>Discord Data</h4>
+          <p>Voluspa collects your Discord ID, Username, Avatar hash, discriminator, public flags, locale, MFA enabled status, premium (Nitro) subscription type, and a list of Discord Guilds (servers) that you are a member of.  This is collected from Discord's API with your permission upon logging in.  All of this is stored securely in a session cookie that is deleted per your browser's settings (this can be on close, a specified time period, etc.), or every 28 days, whichever is less.  Your Discord ID is also stored in the database, and is considered your unique identifier for using Voluspa (instead of e.g. your email address).</p>
+          <h4>Other personal data</h4>
+          <p>Voluspa collects your timezone, via a manual input from the end user.  This is stored in the database and session cookie to allow for conversion of activity start times across multiple timezones.  Your IP address, browser type, and the date/time of each visitor request are also logged.</p>
+          <h4>How we use this data</h4>
+          <p>Any and all data collected is used for the sole purpose of providing the service to you, the user.  We do not run ads, we do not sell, trade, rent, or share your data with 3rd parties for commercial purposes, and the only cookie we use is the session cookie noted above.  All information is transmitted over HTTPS/TLS, however no security measure is 100% secure and by using this service you do so at your own risk.</p>
+        </div>
+      </div>
+    </div>
+
+</body>
+
+</html>
