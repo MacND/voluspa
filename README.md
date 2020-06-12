@@ -6,41 +6,17 @@
   </a>
 </p>
 
-> A Discord.js bot to help arrange Destiny 2 activities.
+## Voluspa, the Guardians' Counterattack
+A Discord bot to help arrange Destiny 2 activities.  Automatically converts start times between timezones, keeps fireteam members updated when events are modified, and more.
 
-### 🏠 [Homepage](https://github.com/MacND/voluspa)
+### Development status
+Voluspa is now in closed beta!  I'm testing out the [website](https://voluspa.app) and OAuth login alongside multi-server capability with a few friends' servers.  
 
-## Install
+### Development plan
+OAuth was a major piece of work, but I still have more I want to do:
+1) Migrate from MySQL to Postgres, and start storing data using JSONB instead, taking advantage of AWS RDS
+2) Break apart the Discord bot from the website.  Undecided on whether we go multi-repo or mono-repo for this
+3) Begin building infrastructure in AWS using Terraform; EKS, RDS, and other suitable technologies, and create a proper testing platform
+4) Refactor the website to use Bootstrap CSS instead of PureCSS
 
-```sh
-npm install
-```
-
-## Usage
-
-```sh
-node main.js
-```
-
-## Run tests
-
-```sh
-npm run test
-```
-
-## Author
-
-👤 **Mac**
-
-* Github: [@MacND](https://github.com/MacND)
-
-## 🤝 Contributing
-
-Contributions, issues and feature requests are welcome!<br />Feel free to check [issues page](https://github.com/MacND/voluspa/issues/new/choose).
-
-## Show your support
-
-Give a ⭐️ if this project helped you!
-
-***
-_This README was generated with ❤️ by [readme-md-generator](https://github.com/kefranabg/readme-md-generator)_
+This is a lot of work and is not necessarily in the order I would want to do it, but it gives you an idea of what I want to achieve here.
