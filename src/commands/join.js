@@ -34,7 +34,7 @@ module.exports = {
       } 
 
       fireteam = await db.fireteams.getByEventId(event.id);
-      console.log(event.start_time);
+
       if (event.start_time) {
         notify.pingUsersBeforeEvent(fireteam.discord_id.split(','), `In 10 minutes you are scheduled to take part in **${event.join_code}**.  Please proceed to orbit and join up with your fireteam.`, event.start_time, event.join_code);
       }
