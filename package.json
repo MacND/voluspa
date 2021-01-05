@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@discordjs/opus": "^0.3.2",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "btoa": "^1.2.1",
     "discord.js": "^12.2.0",
     "ejs": "^3.1.3",
